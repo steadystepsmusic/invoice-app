@@ -864,10 +864,10 @@ async function shareInvoice() {
 
     let finalUrl = fullUrl;
     try {
-      const resp = await fetch(`https://is.gd/create.php?format=simple&url=${encodeURIComponent(fullUrl)}`);
+      const resp = await fetch(`https://tinyurl.com/api-create.php?url=${encodeURIComponent(fullUrl)}`);
       if (resp.ok) {
         const short = (await resp.text()).trim();
-        if (short.startsWith('https://is.gd/')) finalUrl = short;
+        if (short.startsWith('https://tinyurl.com/')) finalUrl = short;
       }
     } catch {}
 
@@ -959,7 +959,7 @@ const payConfig = {
     color: 'venmo',
     buildLink: (handle, amount, memo) => {
       const h = encodeURIComponent(handle.replace(/^@/, ''));
-      return `https://venmo.com/?txn=pay&recipients=${h}&amount=${amount}&note=${encodeURIComponent(memo)}`;
+      return `https://account.venmo.com/pay?recipients=${h}&amount=${amount}&note=${encodeURIComponent(memo)}`;
     },
     displayHandle: h => '@' + h.replace(/^@/, '')
   },
@@ -1280,7 +1280,8 @@ function buildInvoiceFromDOM() {
     handle: (state.handles[key] || '').trim()
   }));
 
-  const memo = `Invoice ${number} - ${name || 'payment'}`;
+  const firstDesc = lineItems.find(i => i.desc?.trim())?.desc?.trim();
+  const memo = firstDesc || `Invoice ${number}`;
 
   return {
     version: 1,
