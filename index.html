@@ -1,0 +1,1407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Invoice Generator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;1,9..144,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  :root {
+    --ui-bg: #0f0f0f;
+    --ui-panel: #181818;
+    --ui-panel-raised: #1f1f1f;
+    --ui-border: #2a2a2a;
+    --ui-border-strong: #3a3a3a;
+    --ui-text: #e8e8e8;
+    --ui-text-dim: #8a8a8a;
+    --ui-text-muted: #5a5a5a;
+    --ui-input-bg: #0a0a0a;
+    --gold: #c9a84c;
+    --gold-soft: #a88a3a;
+
+    /* Invoice template tokens (Executive) */
+    --inv-ink: #0a0a0a;
+    --inv-paper: #ffffff;
+    --inv-accent: #c9a84c;
+    --inv-rule: #e5e5e5;
+    --inv-rule-soft: #f0f0f0;
+    --inv-muted: #6b6b6b;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+
+  body {
+    background: var(--ui-bg);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2rem 1rem 4rem;
+    color: var(--ui-text);
+    font-feature-settings: 'cv11', 'ss01';
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .app-head {
+    width: 100%;
+    max-width: 680px;
+    margin-bottom: 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+  }
+  .app-title {
+    font-family: 'Fraunces', serif;
+    font-size: 1.5rem;
+    font-weight: 400;
+    letter-spacing: -0.01em;
+    color: var(--ui-text);
+  }
+  .app-title .dot { color: var(--gold); }
+  .app-sub {
+    font-size: 0.72rem;
+    color: var(--ui-text-muted);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    margin-top: 0.25rem;
+  }
+  .history-toggle {
+    background: none;
+    border: 1px solid var(--ui-border);
+    color: var(--ui-text-dim);
+    font-family: inherit;
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 0.45rem 0.8rem;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: all 0.15s;
+  }
+  .history-toggle:hover { border-color: var(--gold); color: var(--gold); }
+
+  .editor {
+    background: var(--ui-panel);
+    border: 1px solid var(--ui-border);
+    border-radius: 6px;
+    padding: 1.75rem;
+    width: 100%;
+    max-width: 680px;
+    margin-bottom: 1.5rem;
+  }
+
+  .history-panel {
+    background: var(--ui-panel);
+    border: 1px solid var(--ui-border);
+    border-radius: 6px;
+    padding: 1.25rem 1.5rem;
+    width: 100%;
+    max-width: 680px;
+    margin-bottom: 1rem;
+    display: none;
+  }
+  .history-panel.open { display: block; }
+  .history-panel h3 {
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ui-text-dim);
+    margin-bottom: 0.8rem;
+    font-weight: 500;
+  }
+  .history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    max-height: 240px;
+    overflow-y: auto;
+  }
+  .history-item {
+    display: grid;
+    grid-template-columns: auto 1fr auto auto;
+    gap: 0.75rem;
+    padding: 0.55rem 0.6rem;
+    border-radius: 3px;
+    cursor: pointer;
+    align-items: center;
+    font-size: 0.82rem;
+    transition: background 0.1s;
+  }
+  .history-item:hover { background: var(--ui-panel-raised); }
+  .history-item .h-num { color: var(--gold); font-variant-numeric: tabular-nums; font-size: 0.76rem; }
+  .history-item .h-client { color: var(--ui-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .history-item .h-total { color: var(--ui-text-dim); font-variant-numeric: tabular-nums; }
+  .history-item .h-date { color: var(--ui-text-muted); font-size: 0.72rem; font-variant-numeric: tabular-nums; }
+  .history-empty { color: var(--ui-text-muted); font-size: 0.82rem; font-style: italic; }
+  .history-item .h-del {
+    background: none; border: none; color: var(--ui-text-muted);
+    cursor: pointer; font-size: 1rem; padding: 0; line-height: 1;
+  }
+  .history-item .h-del:hover { color: var(--gold); }
+
+  .editor-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.9rem 0.8rem;
+  }
+  .editor-grid .full { grid-column: 1 / -1; }
+
+  label {
+    display: block;
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ui-text-dim);
+    margin-bottom: 0.35rem;
+    font-weight: 500;
+  }
+
+  input, textarea, select {
+    width: 100%;
+    background: var(--ui-input-bg);
+    border: 1px solid var(--ui-border);
+    border-radius: 3px;
+    color: var(--ui-text);
+    font-family: inherit;
+    font-size: 0.9rem;
+    padding: 0.55rem 0.75rem;
+    outline: none;
+    transition: border-color 0.15s;
+    font-variant-numeric: tabular-nums;
+  }
+  input:focus, textarea:focus, select:focus { border-color: var(--gold); }
+  textarea { resize: vertical; min-height: 64px; font-size: 0.88rem; }
+  input[type=file] { padding: 0.4rem; font-size: 0.8rem; }
+
+  .section-label {
+    font-size: 0.68rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ui-text-dim);
+    margin: 1.25rem 0 0.7rem;
+    padding-bottom: 0.4rem;
+    border-bottom: 1px solid var(--ui-border);
+    font-weight: 500;
+  }
+  .section-label:first-child { margin-top: 0; }
+
+  .logo-row {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+  }
+  .logo-preview {
+    width: 56px;
+    height: 56px;
+    border: 1px dashed var(--ui-border-strong);
+    border-radius: 3px;
+    background: var(--ui-input-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--ui-text-muted);
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  .logo-preview img { max-width: 100%; max-height: 100%; object-fit: contain; }
+  .logo-controls { flex: 1; display: flex; flex-direction: column; gap: 0.35rem; }
+  .logo-clear {
+    background: none;
+    border: 1px solid var(--ui-border);
+    color: var(--ui-text-dim);
+    font-family: inherit;
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 0.35rem 0.6rem;
+    border-radius: 3px;
+    cursor: pointer;
+    align-self: flex-start;
+  }
+  .logo-clear:hover { border-color: var(--gold); color: var(--gold); }
+
+  .line-items-header {
+    display: grid;
+    grid-template-columns: 1fr 70px 100px 24px;
+    gap: 0.5rem;
+    font-size: 0.66rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ui-text-muted);
+    padding: 0 0 0.4rem 0;
+    margin-bottom: 0.4rem;
+    font-weight: 500;
+  }
+
+  .line-item {
+    display: grid;
+    grid-template-columns: 1fr 70px 100px 24px;
+    gap: 0.5rem;
+    margin-bottom: 0.4rem;
+    align-items: center;
+  }
+
+  .remove-btn {
+    background: none;
+    border: none;
+    color: var(--ui-text-muted);
+    cursor: pointer;
+    font-size: 1.1rem;
+    padding: 0;
+    line-height: 1;
+    transition: color 0.15s;
+  }
+  .remove-btn:hover { color: var(--gold); }
+
+  .add-line-btn {
+    background: none;
+    border: 1px dashed var(--ui-border-strong);
+    color: var(--ui-text-dim);
+    font-family: inherit;
+    font-size: 0.78rem;
+    letter-spacing: 0.06em;
+    padding: 0.5rem;
+    width: 100%;
+    cursor: pointer;
+    border-radius: 3px;
+    margin-top: 0.3rem;
+    transition: all 0.15s;
+  }
+  .add-line-btn:hover { border-color: var(--gold); color: var(--gold); }
+
+  .payment-options {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-top: 0.3rem;
+  }
+  .pay-chip {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    background: var(--ui-input-bg);
+    border: 1px solid var(--ui-border);
+    border-radius: 3px;
+    padding: 0.4rem 0.7rem;
+    font-size: 0.8rem;
+    color: var(--ui-text-dim);
+    cursor: pointer;
+    transition: all 0.15s;
+    user-select: none;
+  }
+  .pay-chip input[type=checkbox] { display: none; }
+  .pay-chip.active { border-color: var(--gold); color: var(--ui-text); background: #1a140a; }
+  .pay-chip-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ui-border-strong); transition: background 0.15s; }
+  .pay-chip.active .pay-chip-dot { background: var(--gold); }
+
+  #pay-fields {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.9rem 0.8rem;
+    margin-top: 0.8rem;
+  }
+  #pay-fields:empty { display: none; }
+
+  .generate-btn {
+    width: 100%;
+    background: var(--gold);
+    border: none;
+    color: #0a0a0a;
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 0.85rem;
+    cursor: pointer;
+    border-radius: 3px;
+    margin-top: 1.5rem;
+    transition: background 0.15s;
+  }
+  .generate-btn:hover { background: #d4b65a; }
+
+  #invoice-output { width: 100%; max-width: 680px; }
+
+  /* ============================================ */
+  /* INVOICE — Executive template                 */
+  /* ============================================ */
+  .invoice {
+    background: var(--inv-paper);
+    color: var(--inv-ink);
+    padding: 3.5rem 3.25rem 2.75rem;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+    border-radius: 2px;
+    font-family: 'Inter', sans-serif;
+    font-variant-numeric: tabular-nums;
+  }
+  .invoice::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--inv-accent);
+  }
+
+  .inv-header {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 2rem;
+    align-items: flex-start;
+    margin-bottom: 2.75rem;
+  }
+
+  .inv-brand { display: flex; flex-direction: column; gap: 0.9rem; }
+  .inv-logo { max-height: 52px; max-width: 160px; object-fit: contain; align-self: flex-start; }
+  .inv-brand-name {
+    font-family: 'Inter', sans-serif;
+    font-size: 1.35rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--inv-ink);
+    line-height: 1.15;
+  }
+  .inv-brand-sub {
+    font-size: 0.78rem;
+    color: var(--inv-muted);
+    margin-top: 0.25rem;
+    letter-spacing: 0.02em;
+    white-space: pre-line;
+  }
+
+  .inv-meta {
+    text-align: right;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+  .inv-wordmark {
+    font-family: 'Fraunces', serif;
+    font-size: 1.65rem;
+    font-weight: 400;
+    letter-spacing: 0.05em;
+    color: var(--inv-ink);
+    line-height: 1;
+    margin-bottom: 0.3rem;
+  }
+  .inv-num {
+    font-size: 0.72rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--inv-muted);
+  }
+  .inv-num strong { color: var(--inv-ink); font-weight: 600; letter-spacing: 0.04em; }
+  .inv-date-line { font-size: 0.76rem; color: var(--inv-muted); margin-top: 0.1rem; }
+  .inv-date-line strong { color: var(--inv-ink); font-weight: 500; }
+
+  .inv-bill-to {
+    margin-bottom: 2rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--inv-rule);
+  }
+  .inv-bill-to .label {
+    font-size: 0.66rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--inv-muted);
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+  }
+  .inv-bill-to .client-name {
+    font-size: 1.05rem;
+    color: var(--inv-ink);
+    font-weight: 500;
+    letter-spacing: -0.005em;
+  }
+
+  .inv-items { width: 100%; border-collapse: collapse; margin-bottom: 1.75rem; }
+  .inv-items thead th {
+    font-size: 0.66rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--inv-muted);
+    padding: 0 0 0.7rem;
+    border-bottom: 1px solid var(--inv-ink);
+    font-weight: 500;
+    text-align: left;
+  }
+  .inv-items thead th.num { text-align: right; }
+  .inv-items tbody td {
+    padding: 0.85rem 0;
+    font-size: 0.88rem;
+    color: var(--inv-ink);
+    border-bottom: 1px solid var(--inv-rule-soft);
+    vertical-align: top;
+  }
+  .inv-items tbody td.num { text-align: right; color: var(--inv-ink); }
+  .inv-items tbody td.dim { color: var(--inv-muted); text-align: right; }
+
+  .inv-totals { display: flex; justify-content: flex-end; margin-bottom: 2rem; }
+  .totals-box { min-width: 260px; }
+  .totals-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.84rem;
+    padding: 0.3rem 0;
+    color: var(--inv-muted);
+  }
+  .totals-row strong { color: var(--inv-ink); font-weight: 500; }
+  .totals-row.total {
+    border-top: 1px solid var(--inv-ink);
+    margin-top: 0.5rem;
+    padding-top: 0.8rem;
+    align-items: baseline;
+  }
+  .totals-row.total .total-label {
+    font-size: 0.68rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--inv-ink);
+    font-weight: 500;
+  }
+  .totals-row.total .total-amount {
+    font-family: 'Fraunces', serif;
+    font-size: 1.75rem;
+    font-weight: 500;
+    color: var(--inv-accent);
+    letter-spacing: -0.01em;
+    line-height: 1;
+  }
+
+  .inv-note {
+    font-size: 0.82rem;
+    color: var(--inv-muted);
+    margin-bottom: 2rem;
+    white-space: pre-line;
+    padding: 1rem 1.1rem;
+    border-left: 2px solid var(--inv-accent);
+    background: #faf7ef;
+    border-radius: 0 3px 3px 0;
+  }
+
+  .pay-section {
+    border-top: 1px solid var(--inv-rule);
+    padding-top: 1.75rem;
+    margin-top: 0.5rem;
+  }
+  .pay-section-label {
+    font-size: 0.68rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--inv-muted);
+    margin-bottom: 1.25rem;
+    font-weight: 500;
+  }
+  .pay-section-label strong { color: var(--inv-ink); font-weight: 600; }
+  .pay-methods {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 1.25rem;
+    align-items: start;
+  }
+  .pay-method {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    text-align: center;
+  }
+  .pay-method .qr-wrap {
+    background: #fff;
+    padding: 6px;
+    border: 1px solid var(--inv-rule);
+    border-radius: 3px;
+    line-height: 0;
+  }
+  .pay-method-label {
+    font-size: 0.64rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--inv-muted);
+    font-weight: 500;
+  }
+  .pay-method-handle {
+    font-size: 0.8rem;
+    color: var(--inv-ink);
+    font-weight: 500;
+    word-break: break-all;
+    max-width: 140px;
+  }
+  .pay-btn {
+    display: inline-block;
+    padding: 0.5rem 0.9rem;
+    border-radius: 3px;
+    font-family: inherit;
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-decoration: none;
+    text-align: center;
+    transition: opacity 0.15s;
+    white-space: nowrap;
+  }
+  .pay-btn:hover { opacity: 0.88; }
+  .pay-btn.venmo   { background: #008CFF; color: #fff; }
+  .pay-btn.cashapp { background: #00D64F; color: #fff; }
+  .pay-btn.paypal  { background: #003087; color: #fff; }
+
+  .inv-footer {
+    margin-top: 2.25rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--inv-rule);
+    font-size: 0.68rem;
+    color: var(--inv-muted);
+    text-align: center;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  .action-bar { display: flex; gap: 0.75rem; margin-top: 1rem; }
+  .action-btn {
+    flex: 1;
+    background: none;
+    border: 1px solid var(--ui-border);
+    color: var(--ui-text-dim);
+    font-family: inherit;
+    font-size: 0.76rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-weight: 500;
+    padding: 0.7rem;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: all 0.15s;
+  }
+  .action-btn:hover { border-color: var(--gold); color: var(--gold); }
+  .action-btn.primary { background: var(--gold); border-color: var(--gold); color: #0a0a0a; }
+  .action-btn.primary:hover { background: #d4b65a; opacity: 1; }
+
+  @media print {
+    @page { size: letter; margin: 0.4in; }
+    html, body { background: #fff; padding: 0; min-height: 0 !important; height: auto !important; }
+    .app-head, .editor, .history-panel, .history-toggle, .action-bar { display: none !important; }
+    #invoice-output { max-width: 100%; }
+    .invoice { box-shadow: none; border-radius: 0; }
+    .pay-btn { display: none !important; }
+  }
+
+  @media (max-width: 560px) {
+    body { padding: 1rem 0.75rem 3rem; }
+    .editor { padding: 1.25rem; }
+    .editor-grid { grid-template-columns: 1fr; }
+    .editor-grid .full { grid-column: 1; }
+    #pay-fields { grid-template-columns: 1fr; }
+    .invoice { padding: 1.75rem 1.5rem; }
+    .inv-header { grid-template-columns: 1fr; }
+    .inv-meta { text-align: left; }
+    .line-items-header, .line-item { grid-template-columns: 1fr 60px 80px 20px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app-head">
+  <div>
+    <div class="app-title">Invoice<span class="dot">.</span></div>
+    <div class="app-sub">Premium invoicing, zero friction</div>
+  </div>
+  <button class="history-toggle" id="history-toggle" onclick="toggleHistory()">History</button>
+</div>
+
+<div class="history-panel" id="history-panel">
+  <h3>Recent Invoices</h3>
+  <div class="history-list" id="history-list"></div>
+</div>
+
+<div class="editor">
+  <div class="editor-grid">
+    <div class="full">
+      <div class="section-label">Your Info</div>
+    </div>
+    <div class="full">
+      <label>Logo</label>
+      <div class="logo-row">
+        <div class="logo-preview" id="logo-preview"><span id="logo-placeholder">Logo</span></div>
+        <div class="logo-controls">
+          <input type="file" id="logo-input" accept="image/*">
+          <button type="button" class="logo-clear" onclick="clearLogo()">Remove</button>
+        </div>
+      </div>
+    </div>
+    <div class="full">
+      <label>Business Name</label>
+      <input id="from-name" type="text" placeholder="Nik Mathews" autocomplete="off">
+    </div>
+    <div class="full">
+      <label>Tagline / Contact</label>
+      <input id="from-sub" type="text" placeholder="(619) 208-6080 · nikmathewsmusic@gmail.com" autocomplete="off">
+    </div>
+
+    <div class="full"><div class="section-label">Client &amp; Invoice</div></div>
+    <div class="full">
+      <label>Bill To</label>
+      <input id="client" type="text" placeholder="The Blue Room" autocomplete="off">
+    </div>
+    <div>
+      <label>Invoice #</label>
+      <input id="inv-num" type="text" autocomplete="off">
+    </div>
+    <div>
+      <label>Tax Rate (%)</label>
+      <input id="tax-rate" type="number" min="0" max="100" step="0.1" value="0">
+    </div>
+    <div>
+      <label>Issue Date</label>
+      <input id="inv-date" type="date">
+    </div>
+    <div>
+      <label>Due Date</label>
+      <input id="inv-due" type="date">
+    </div>
+
+    <div class="full">
+      <div class="section-label">Line Items</div>
+      <div class="line-items-header">
+        <span>Description</span><span>Qty</span><span>Rate</span><span></span>
+      </div>
+      <div id="line-items"></div>
+      <button class="add-line-btn" type="button" onclick="addLine()">+ Add Line Item</button>
+    </div>
+
+    <div class="full">
+      <label>Notes / Terms</label>
+      <textarea id="inv-note" placeholder="Thank you for the gig. Payment appreciated within 7 days."></textarea>
+    </div>
+
+    <div class="full">
+      <div class="section-label">Payment Methods</div>
+      <div class="payment-options" id="pay-options"></div>
+      <div id="pay-fields"></div>
+    </div>
+  </div>
+  <div style="display:flex;gap:0.6rem;margin-top:1.5rem;">
+    <button class="generate-btn" style="margin-top:0;width:auto;flex:1;white-space:nowrap;" type="button" onclick="generateInvoice()">Generate Invoice</button>
+    <button class="generate-btn share-btn" style="margin-top:0;width:auto;flex:0 0 auto;white-space:nowrap;background:transparent;color:var(--gold);border:1px solid var(--gold);" type="button" onclick="shareInvoice()">Share Invoice</button>
+    <button class="generate-btn" style="margin-top:0;width:auto;flex:0 0 auto;white-space:nowrap;background:#1f1f1f;color:#6b6b6b;border:1px solid #2a2a2a;" type="button" onclick="generateAndExport()">PDF</button>
+  </div>
+</div>
+
+<div id="invoice-output"></div>
+
+<script>
+/* ============================================================
+   USER DEFAULTS — edit this block once with your info.
+   Used on first load (or after clearing browser storage).
+   After that, LocalStorage overrides these.
+   When converting for other users: blank these out or replace
+   this block with an onboarding flow.
+   ============================================================ */
+/* ============================================================
+   SHARING — hosted viewer URL + ECDSA private signing key
+   The private key never leaves this file. The public key is
+   embedded in invoice-share/index.html.
+   ============================================================ */
+const SHARE_BASE_URL = 'https://pay.nikmathewsmusic.com';
+
+const PRIVATE_KEY_JWK = {"key_ops":["sign"],"ext":true,"kty":"EC","x":"IL0hJdVdiVA121W8Cw3uK-DeASm39E0MMhckY0JGhWI","y":"R02VOzsSIugjPFYtcK2PPSgrp7tQhK6HmvRUbZEwPPg","crv":"P-256","d":"ujDUkVY2Pud6tvCnp1O2o0sHQEtsWij7_Rj6mZMWadk"};
+
+let _signingKey = null;
+async function getSigningKey() {
+  if (_signingKey) return _signingKey;
+  _signingKey = await crypto.subtle.importKey(
+    'jwk', PRIVATE_KEY_JWK,
+    { name: 'ECDSA', namedCurve: 'P-256' },
+    false, ['sign']
+  );
+  return _signingKey;
+}
+
+function toB64url(bytes) {
+  return btoa(String.fromCharCode(...new Uint8Array(bytes)))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+}
+
+async function shareInvoice() {
+  generateInvoice();
+
+  const inv = buildInvoiceFromDOM();
+  const shareObj = {
+    v: 1,
+    n:    inv.brand.name,
+    t:    inv.brand.tagline,
+    c:    inv.client.name,
+    num:  inv.number,
+    d:    inv.dates.issued,
+    due:  inv.dates.due,
+    items: inv.items.map(i => ({ desc: i.desc, qty: Number(i.qty) || 1, rate: Number(i.rate) || 0 })),
+    tax:  inv.tax.rate,
+    notes: inv.notes,
+    pay:  inv.payments.reduce((acc, p) => p.handle ? { ...acc, [p.key]: p.handle } : acc, {})
+  };
+
+  const dataBytes = new TextEncoder().encode(JSON.stringify(shareObj));
+  const key = await getSigningKey();
+  const sigBytes = await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, key, dataBytes);
+
+  const dataB64 = toB64url(dataBytes);
+  const sigB64  = toB64url(sigBytes);
+  const fullUrl = `${SHARE_BASE_URL}/#v1.${dataB64}.${sigB64}`;
+
+  let finalUrl = fullUrl;
+  try {
+    const resp = await fetch(`https://is.gd/create.php?format=simple&url=${encodeURIComponent(fullUrl)}`);
+    if (resp.ok) {
+      const short = (await resp.text()).trim();
+      if (short.startsWith('https://is.gd/')) finalUrl = short;
+    }
+  } catch {}
+
+  await navigator.clipboard.writeText(finalUrl);
+
+  const btns = document.querySelectorAll('.share-btn');
+  btns.forEach(b => { b.textContent = finalUrl === fullUrl ? 'Link Copied' : 'Short Link Copied'; });
+  setTimeout(() => btns.forEach(b => { b.textContent = 'Share Invoice'; }), 2200);
+}
+
+/* ── End sharing ── */
+
+const USER_DEFAULTS = {
+  brand: {
+    name: 'Nik Mathews',
+    tagline: '(619) 208-6080 \u00b7 nikmathewsmusic@gmail.com',
+    logo: ''
+  },
+  handles: {
+    venmo:   '',
+    cashapp: '',
+    paypal:  '',
+    zelle:   'nikmathewsmusic@gmail.com'
+  },
+  activePayments: ['venmo', 'zelle'],
+  defaultTaxRate: 0,
+  defaultDueDays: 7,
+  template: 'executive'
+};
+
+/* ============================================================
+   STATE — persisted preferences (LocalStorage)
+   ============================================================ */
+const STATE_KEY = 'invoiceGenerator:v1';
+const HISTORY_KEY = 'invoiceGenerator:v1:history';
+const HISTORY_MAX = 50;
+
+function defaultState() {
+  return {
+    brand: { ...USER_DEFAULTS.brand },
+    handles: { ...USER_DEFAULTS.handles },
+    activePayments: [...USER_DEFAULTS.activePayments],
+    lastInvoiceNum: 0,
+    defaultTaxRate: USER_DEFAULTS.defaultTaxRate,
+    defaultDueDays: USER_DEFAULTS.defaultDueDays,
+    template: USER_DEFAULTS.template
+  };
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STATE_KEY);
+    if (!raw) return defaultState();
+    return { ...defaultState(), ...JSON.parse(raw) };
+  } catch {
+    return defaultState();
+  }
+}
+
+function saveState() {
+  try { localStorage.setItem(STATE_KEY, JSON.stringify(state)); } catch {}
+}
+
+function loadHistory() {
+  try { return JSON.parse(localStorage.getItem(HISTORY_KEY)) || []; } catch { return []; }
+}
+
+function saveHistory(list) {
+  try { localStorage.setItem(HISTORY_KEY, JSON.stringify(list.slice(0, HISTORY_MAX))); } catch {}
+}
+
+let state = loadState();
+
+/* ============================================================
+   PAYMENT REGISTRY — extension point for Stripe, ACH, etc.
+   ============================================================ */
+const payConfig = {
+  venmo: {
+    key: 'venmo',
+    label: 'Venmo',
+    kind: 'deeplink',
+    handleLabel: '@username (no @)',
+    color: 'venmo',
+    buildLink: (handle, amount, memo) => {
+      const h = encodeURIComponent(handle.replace(/^@/, ''));
+      return `https://venmo.com/?txn=pay&recipients=${h}&amount=${amount}&note=${encodeURIComponent(memo)}`;
+    },
+    displayHandle: h => '@' + h.replace(/^@/, '')
+  },
+  cashapp: {
+    key: 'cashapp',
+    label: 'Cash App',
+    kind: 'deeplink',
+    handleLabel: '$cashtag (no $)',
+    color: 'cashapp',
+    buildLink: (handle, amount) => {
+      const h = encodeURIComponent(handle.replace(/^\$/, ''));
+      return `https://cash.app/$${h}/${amount}`;
+    },
+    displayHandle: h => '$' + h.replace(/^\$/, '')
+  },
+  paypal: {
+    key: 'paypal',
+    label: 'PayPal',
+    kind: 'deeplink',
+    handleLabel: 'paypal.me username',
+    color: 'paypal',
+    buildLink: (handle, amount) => {
+      const h = encodeURIComponent(handle.replace(/^@/, ''));
+      return `https://www.paypal.com/paypalme/${h}/${amount}`;
+    },
+    displayHandle: h => 'paypal.me/' + h.replace(/^@/, '')
+  },
+  zelle: {
+    key: 'zelle',
+    label: 'Zelle',
+    kind: 'handle-only',
+    handleLabel: 'Email or phone',
+    buildQRText: handle => handle,
+    displayHandle: h => h
+  }
+};
+
+/* ============================================================
+   TEMPLATES — extension point for Classic, Minimal, etc.
+   ============================================================ */
+const templates = {
+  executive: {
+    key: 'executive',
+    label: 'Executive',
+    vars: {
+      '--inv-ink': '#0a0a0a',
+      '--inv-paper': '#ffffff',
+      '--inv-accent': '#c9a84c',
+      '--inv-rule': '#e5e5e5',
+      '--inv-rule-soft': '#f0f0f0',
+      '--inv-muted': '#6b6b6b'
+    }
+  }
+};
+
+function applyTemplate(key) {
+  const t = templates[key] || templates.executive;
+  const root = document.documentElement;
+  for (const [k, v] of Object.entries(t.vars)) root.style.setProperty(k, v);
+}
+
+/* ============================================================
+   MONEY / DATES
+   ============================================================ */
+const money = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
+function fmt(n) { return money.format(Number(n) || 0); }
+
+function todayIso() { return new Date().toISOString().slice(0, 10); }
+function addDaysIso(iso, days) {
+  const [y, m, d] = iso.split('-').map(Number);
+  const dt = new Date(y, m - 1, d);
+  dt.setDate(dt.getDate() + days);
+  return dt.toISOString().slice(0, 10);
+}
+function fmtDate(iso) {
+  if (!iso) return '-';
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+/* ============================================================
+   LINE ITEMS
+   ============================================================ */
+let lineItems = [];
+function addLine(desc = '', qty = 1, rate = '') {
+  lineItems.push({ id: Date.now() + Math.random(), desc, qty, rate });
+  renderLines();
+}
+function removeLine(id) {
+  lineItems = lineItems.filter(l => l.id !== id);
+  renderLines();
+}
+function updateLine(id, field, val) {
+  const item = lineItems.find(l => l.id === id);
+  if (item) item[field] = val;
+}
+function renderLines() {
+  const container = document.getElementById('line-items');
+  container.innerHTML = '';
+  lineItems.forEach(item => {
+    const row = document.createElement('div');
+    row.className = 'line-item';
+    row.innerHTML = `
+      <input type="text" placeholder="Performance / Set" value="${escapeHtml(item.desc)}" data-id="${item.id}" data-field="desc">
+      <input type="number" placeholder="1" value="${item.qty}" min="0" step="1" data-id="${item.id}" data-field="qty">
+      <input type="number" placeholder="0.00" value="${item.rate}" min="0" step="0.01" data-id="${item.id}" data-field="rate">
+      <button class="remove-btn" type="button" aria-label="Remove">&times;</button>
+    `;
+    const [descI, qtyI, rateI] = row.querySelectorAll('input');
+    descI.addEventListener('input', e => updateLine(item.id, 'desc', e.target.value));
+    qtyI.addEventListener('input', e => updateLine(item.id, 'qty', e.target.value));
+    rateI.addEventListener('input', e => updateLine(item.id, 'rate', e.target.value));
+    row.querySelector('.remove-btn').addEventListener('click', () => removeLine(item.id));
+    container.appendChild(row);
+  });
+}
+
+function calcTotals(items, taxRate) {
+  const subtotal = items.reduce((s, l) => s + (parseFloat(l.qty) || 0) * (parseFloat(l.rate) || 0), 0);
+  const tax = subtotal * (parseFloat(taxRate) || 0) / 100;
+  return { subtotal, tax, total: subtotal + tax };
+}
+
+/* ============================================================
+   PAYMENT CHIPS & FIELDS
+   ============================================================ */
+function renderPayChips() {
+  const container = document.getElementById('pay-options');
+  container.innerHTML = '';
+  Object.values(payConfig).forEach(cfg => {
+    const chip = document.createElement('label');
+    chip.className = 'pay-chip' + (state.activePayments.includes(cfg.key) ? ' active' : '');
+    chip.innerHTML = `<span class="pay-chip-dot"></span> ${cfg.label}`;
+    chip.addEventListener('click', () => toggleChip(cfg.key));
+    container.appendChild(chip);
+  });
+}
+
+function toggleChip(key) {
+  const idx = state.activePayments.indexOf(key);
+  if (idx >= 0) state.activePayments.splice(idx, 1);
+  else state.activePayments.push(key);
+  saveState();
+  renderPayChips();
+  renderPayFields();
+}
+
+function renderPayFields() {
+  const container = document.getElementById('pay-fields');
+  container.innerHTML = '';
+  state.activePayments.forEach(key => {
+    const cfg = payConfig[key];
+    if (!cfg) return;
+    const wrap = document.createElement('div');
+    wrap.innerHTML = `
+      <label>${cfg.label} Handle</label>
+      <input type="text" placeholder="${cfg.handleLabel}" value="${escapeHtml(state.handles[key] || '')}" data-handle="${key}">
+    `;
+    const input = wrap.querySelector('input');
+    input.addEventListener('input', e => {
+      state.handles[key] = e.target.value.trim();
+      saveState();
+    });
+    container.appendChild(wrap);
+  });
+}
+
+/* ============================================================
+   UTILITIES
+   ============================================================ */
+function escapeHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+  ));
+}
+
+function makeQR(container, text) {
+  if (!container || !text) return;
+  container.innerHTML = '';
+  new QRCode(container, {
+    text,
+    width: 96,
+    height: 96,
+    colorDark: '#0a0a0a',
+    colorLight: '#ffffff',
+    correctLevel: QRCode.CorrectLevel.M
+  });
+}
+
+/* ============================================================
+   INVOICE RENDERING
+   ============================================================ */
+function buildPayBlock(invoice) {
+  const active = invoice.payments.filter(p => p.handle);
+  if (!active.length) return '';
+
+  const cards = active.map(p => {
+    const cfg = payConfig[p.key];
+    const qrId = `qr-${p.key}-${invoice.id}`;
+    let button = '';
+    if (cfg.kind === 'deeplink') {
+      const url = cfg.buildLink(p.handle, invoice.totals.total.toFixed(2), invoice.memo);
+      button = `<a href="${escapeHtml(url)}" class="pay-btn ${cfg.color}" target="_blank" rel="noopener">Pay via ${cfg.label}</a>`;
+    }
+    return `
+      <div class="pay-method">
+        <div class="qr-wrap" id="${qrId}"></div>
+        <span class="pay-method-label">${cfg.label}</span>
+        <span class="pay-method-handle">${escapeHtml(cfg.displayHandle(p.handle))}</span>
+        ${button}
+      </div>`;
+  }).join('');
+
+  return `
+    <div class="pay-section">
+      <div class="pay-section-label">Amount Due <strong>${fmt(invoice.totals.total)}</strong></div>
+      <div class="pay-methods">${cards}</div>
+    </div>`;
+}
+
+function renderInvoice(invoice) {
+  applyTemplate(invoice.template);
+
+  const taxRow = invoice.tax.rate > 0
+    ? `<div class="totals-row"><span>Tax (${invoice.tax.rate}%)</span><span><strong>${fmt(invoice.tax.amount)}</strong></span></div>`
+    : '';
+
+  const rows = invoice.items.map(l => {
+    const lineSub = (parseFloat(l.qty) || 0) * (parseFloat(l.rate) || 0);
+    return `
+      <tr>
+        <td>${escapeHtml(l.desc || '-')}</td>
+        <td class="dim">${l.qty || 1}</td>
+        <td class="dim">${fmt(l.rate || 0)}</td>
+        <td class="num">${fmt(lineSub)}</td>
+      </tr>`;
+  }).join('');
+
+  const logoHtml = invoice.brand.logo
+    ? `<img class="inv-logo" src="${escapeHtml(invoice.brand.logo)}" alt="Logo">`
+    : '';
+
+  return `
+    <div class="invoice" id="the-invoice">
+      <div class="inv-header">
+        <div class="inv-brand">
+          ${logoHtml}
+          <div>
+            <div class="inv-brand-name">${escapeHtml(invoice.brand.name || 'Your Name')}</div>
+            ${invoice.brand.tagline ? `<div class="inv-brand-sub">${escapeHtml(invoice.brand.tagline)}</div>` : ''}
+          </div>
+        </div>
+        <div class="inv-meta">
+          <div class="inv-wordmark">Invoice</div>
+          <div class="inv-num">No. <strong>${escapeHtml(invoice.number)}</strong></div>
+          <div class="inv-date-line">Issued <strong>${fmtDate(invoice.dates.issued)}</strong></div>
+          ${invoice.dates.due ? `<div class="inv-date-line">Due <strong>${fmtDate(invoice.dates.due)}</strong></div>` : ''}
+        </div>
+      </div>
+
+      <div class="inv-bill-to">
+        <div class="label">Bill To</div>
+        <div class="client-name">${escapeHtml(invoice.client.name || 'Client')}</div>
+      </div>
+
+      <table class="inv-items">
+        <thead>
+          <tr>
+            <th>Description</th>
+            <th class="num">Qty</th>
+            <th class="num">Rate</th>
+            <th class="num">Amount</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+
+      <div class="inv-totals">
+        <div class="totals-box">
+          <div class="totals-row"><span>Subtotal</span><span><strong>${fmt(invoice.totals.subtotal)}</strong></span></div>
+          ${taxRow}
+          <div class="totals-row total"><span class="total-label">Total Due</span><span class="total-amount">${fmt(invoice.totals.total)}</span></div>
+        </div>
+      </div>
+
+      ${invoice.notes ? `<div class="inv-note">${escapeHtml(invoice.notes)}</div>` : ''}
+      ${buildPayBlock(invoice)}
+
+      <div class="inv-footer">Thank you &middot; ${escapeHtml(invoice.brand.name || '')}</div>
+    </div>
+
+    <div class="action-bar">
+      <button class="action-btn" type="button" onclick="window.print()">Export PDF</button>
+      <button class="action-btn primary share-btn" type="button" onclick="shareInvoice()">Share Invoice</button>
+      <button class="action-btn" type="button" onclick="copyPayLink()">Copy Pay Link</button>
+    </div>
+  `;
+}
+
+/* ============================================================
+   GENERATE — orchestrator. Reads DOM → invoice object → render → save
+   ============================================================ */
+let lastInvoice = null;
+
+function buildInvoiceFromDOM() {
+  const name = document.getElementById('from-name').value.trim();
+  const tagline = document.getElementById('from-sub').value.trim();
+  const client = document.getElementById('client').value.trim();
+  const number = document.getElementById('inv-num').value.trim() || '001';
+  const issued = document.getElementById('inv-date').value || todayIso();
+  const due = document.getElementById('inv-due').value || '';
+  const notes = document.getElementById('inv-note').value.trim();
+  const taxRate = parseFloat(document.getElementById('tax-rate').value) || 0;
+  const totals = calcTotals(lineItems, taxRate);
+
+  const payments = state.activePayments.map(key => ({
+    key,
+    handle: (state.handles[key] || '').trim()
+  }));
+
+  const memo = `Invoice ${number} - ${name || 'payment'}`;
+
+  return {
+    version: 1,
+    id: number.replace(/[^a-z0-9]/gi, '') || 'inv' + Date.now(),
+    number,
+    template: state.template,
+    brand: { name, tagline, logo: state.brand.logo || '' },
+    client: { name: client },
+    dates: { issued, due },
+    items: lineItems.map(l => ({ desc: l.desc, qty: l.qty, rate: l.rate })),
+    tax: { rate: taxRate, amount: totals.tax },
+    totals,
+    payments,
+    notes,
+    memo,
+    createdAt: new Date().toISOString()
+  };
+}
+
+function generateInvoice() {
+  // Sync brand info into state before building
+  state.brand.name = document.getElementById('from-name').value.trim();
+  state.brand.tagline = document.getElementById('from-sub').value.trim();
+  state.defaultTaxRate = parseFloat(document.getElementById('tax-rate').value) || 0;
+  saveState();
+
+  const invoice = buildInvoiceFromDOM();
+  lastInvoice = invoice;
+
+  document.getElementById('invoice-output').innerHTML = renderInvoice(invoice);
+  document.getElementById('invoice-output').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  // Paint QR codes after DOM is in place
+  setTimeout(() => {
+    invoice.payments.filter(p => p.handle).forEach(p => {
+      const cfg = payConfig[p.key];
+      const el = document.getElementById(`qr-${p.key}-${invoice.id}`);
+      let text;
+      if (cfg.kind === 'deeplink') {
+        text = cfg.buildLink(p.handle, invoice.totals.total.toFixed(2), invoice.memo);
+      } else if (cfg.kind === 'handle-only') {
+        text = cfg.buildQRText(p.handle);
+      }
+      makeQR(el, text);
+    });
+  }, 30);
+
+  // Save to history + bump next invoice number in state AND in the input
+  recordToHistory(invoice);
+  bumpInvoiceNumber(invoice.number);
+  const next = (state.lastInvoiceNum || 0) + 1;
+  document.getElementById('inv-num').value = String(next).padStart(3, '0');
+}
+
+function generateAndExport() {
+  generateInvoice();
+  setTimeout(() => window.print(), 400);
+}
+
+function copyPayLink() {
+  if (!lastInvoice) return;
+  const firstDeep = lastInvoice.payments.find(p => p.handle && payConfig[p.key].kind === 'deeplink');
+  if (!firstDeep) {
+    alert('Add a handle for Venmo, Cash App, or PayPal first.');
+    return;
+  }
+  const cfg = payConfig[firstDeep.key];
+  const url = cfg.buildLink(firstDeep.handle, lastInvoice.totals.total.toFixed(2), lastInvoice.memo);
+  navigator.clipboard.writeText(url).then(() => {
+    const btn = document.querySelector('.action-btn.primary');
+    const orig = btn.textContent;
+    btn.textContent = 'Copied';
+    setTimeout(() => { btn.textContent = orig; }, 1600);
+  });
+}
+
+/* ============================================================
+   HISTORY
+   ============================================================ */
+function recordToHistory(invoice) {
+  const history = loadHistory();
+  // Replace if same number already exists
+  const filtered = history.filter(h => h.number !== invoice.number);
+  filtered.unshift(invoice);
+  saveHistory(filtered);
+  renderHistory();
+}
+
+function bumpInvoiceNumber(currentNum) {
+  const parsed = parseInt(currentNum, 10);
+  if (!isNaN(parsed)) {
+    state.lastInvoiceNum = Math.max(state.lastInvoiceNum, parsed);
+    saveState();
+  }
+}
+
+function renderHistory() {
+  const list = document.getElementById('history-list');
+  const history = loadHistory();
+  if (!history.length) {
+    list.innerHTML = '<div class="history-empty">No invoices yet. Generate one to get started.</div>';
+    return;
+  }
+  list.innerHTML = history.map(inv => `
+    <div class="history-item" data-id="${inv.id}">
+      <span class="h-num">${escapeHtml(inv.number)}</span>
+      <span class="h-client">${escapeHtml(inv.client?.name || 'Client')}</span>
+      <span class="h-total">${fmt(inv.totals?.total || 0)}</span>
+      <span class="h-date">${fmtDate(inv.dates?.issued)}</span>
+      <button class="h-del" type="button" aria-label="Delete">&times;</button>
+    </div>
+  `).join('');
+  list.querySelectorAll('.history-item').forEach(el => {
+    const id = el.dataset.id;
+    el.addEventListener('click', (e) => {
+      if (e.target.classList.contains('h-del')) return;
+      loadInvoiceFromHistory(id);
+    });
+    el.querySelector('.h-del').addEventListener('click', (e) => {
+      e.stopPropagation();
+      deleteFromHistory(id);
+    });
+  });
+}
+
+function loadInvoiceFromHistory(id) {
+  const inv = loadHistory().find(h => h.id === id);
+  if (!inv) return;
+  document.getElementById('from-name').value = inv.brand.name || '';
+  document.getElementById('from-sub').value = inv.brand.tagline || '';
+  document.getElementById('client').value = inv.client?.name || '';
+  document.getElementById('inv-num').value = inv.number || '';
+  document.getElementById('inv-date').value = inv.dates?.issued || todayIso();
+  document.getElementById('inv-due').value = inv.dates?.due || '';
+  document.getElementById('tax-rate').value = inv.tax?.rate ?? 0;
+  document.getElementById('inv-note').value = inv.notes || '';
+
+  lineItems = (inv.items || []).map(i => ({ id: Date.now() + Math.random(), ...i }));
+  renderLines();
+
+  lastInvoice = inv;
+  document.getElementById('invoice-output').innerHTML = renderInvoice(inv);
+  setTimeout(() => {
+    inv.payments.filter(p => p.handle).forEach(p => {
+      const cfg = payConfig[p.key];
+      const el = document.getElementById(`qr-${p.key}-${inv.id}`);
+      const text = cfg.kind === 'deeplink'
+        ? cfg.buildLink(p.handle, inv.totals.total.toFixed(2), inv.memo)
+        : cfg.buildQRText(p.handle);
+      makeQR(el, text);
+    });
+  }, 30);
+  document.getElementById('invoice-output').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function deleteFromHistory(id) {
+  if (!confirm('Delete this invoice from history?')) return;
+  saveHistory(loadHistory().filter(h => h.id !== id));
+  renderHistory();
+}
+
+function toggleHistory() {
+  const panel = document.getElementById('history-panel');
+  panel.classList.toggle('open');
+  document.getElementById('history-toggle').textContent = panel.classList.contains('open') ? 'Hide History' : 'History';
+}
+
+/* ============================================================
+   LOGO UPLOAD
+   ============================================================ */
+function renderLogoPreview() {
+  const preview = document.getElementById('logo-preview');
+  if (state.brand.logo) {
+    preview.innerHTML = `<img src="${escapeHtml(state.brand.logo)}" alt="Logo">`;
+  } else {
+    preview.innerHTML = '<span>Logo</span>';
+  }
+}
+
+function clearLogo() {
+  state.brand.logo = '';
+  saveState();
+  renderLogoPreview();
+  document.getElementById('logo-input').value = '';
+}
+
+document.getElementById('logo-input').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  if (file.size > 500 * 1024) {
+    alert('Logo is large (>500KB). It will still work but consider a smaller file for faster invoices.');
+  }
+  const reader = new FileReader();
+  reader.onload = ev => {
+    state.brand.logo = ev.target.result;
+    saveState();
+    renderLogoPreview();
+  };
+  reader.readAsDataURL(file);
+});
+
+/* ============================================================
+   INIT — hydrate form from state, wire persistence listeners
+   ============================================================ */
+function init() {
+  applyTemplate(state.template);
+
+  // Hydrate form fields
+  document.getElementById('from-name').value = state.brand.name || '';
+  document.getElementById('from-sub').value = state.brand.tagline || '';
+  document.getElementById('tax-rate').value = state.defaultTaxRate || 0;
+  document.getElementById('inv-date').value = todayIso();
+  document.getElementById('inv-due').value = addDaysIso(todayIso(), state.defaultDueDays || 7);
+
+  // Auto-increment invoice number
+  const next = (state.lastInvoiceNum || 0) + 1;
+  document.getElementById('inv-num').value = String(next).padStart(3, '0');
+
+  renderLogoPreview();
+  renderPayChips();
+  renderPayFields();
+  renderHistory();
+
+  // Seed one line item for new sessions
+  if (!lineItems.length) addLine('Live Music Performance', 1, '');
+
+  // Persist brand fields on change (debounced-ish via input)
+  document.getElementById('from-name').addEventListener('input', e => { state.brand.name = e.target.value.trim(); saveState(); });
+  document.getElementById('from-sub').addEventListener('input', e => { state.brand.tagline = e.target.value.trim(); saveState(); });
+  document.getElementById('tax-rate').addEventListener('input', e => { state.defaultTaxRate = parseFloat(e.target.value) || 0; saveState(); });
+}
+
+init();
+</script>
+</body>
+</html>
