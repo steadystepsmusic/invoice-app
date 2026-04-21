@@ -33,7 +33,7 @@
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
-  html, body { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+  html, body { font-family: 'Inter', system-ui, -apple-system, sans-serif; overflow-x: hidden; }
 
   body {
     background: var(--ui-bg);
@@ -120,6 +120,7 @@
     gap: 0.25rem;
     max-height: 240px;
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
   .history-item {
     display: grid;
@@ -565,6 +566,8 @@
     text-transform: uppercase;
   }
 
+  .btn-row { display: flex; gap: 0.6rem; margin-top: 1.5rem; align-items: stretch; }
+  .btn-pdf { flex: 0 0 60px; width: 60px; padding-left: 0; padding-right: 0; }
   .action-bar { display: flex; gap: 0.75rem; margin-top: 1rem; }
   .action-btn {
     flex: 1;
@@ -587,11 +590,17 @@
 
   @media print {
     @page { size: letter; margin: 0.4in; }
-    html, body { background: #fff; padding: 0; min-height: 0 !important; height: auto !important; }
-    .app-head, .editor, .history-panel, .history-toggle, .action-bar { display: none !important; }
+    html, body { background: #fff; padding: 0; min-height: 0 !important; height: auto !important; overflow: visible !important; }
+    .app-head, .editor, .history-panel, .history-toggle, .action-bar, .btn-row { display: none !important; }
     #invoice-output { max-width: 100%; }
-    .invoice { box-shadow: none; border-radius: 0; }
+    .invoice { box-shadow: none; border-radius: 0; padding: 0; }
     .pay-btn { display: none !important; }
+    .pay-methods { grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 0.75rem; }
+    .pay-method .qr-wrap canvas, .pay-method .qr-wrap img { width: 80px !important; height: 80px !important; }
+    .pay-section { padding-top: 1rem; margin-top: 0; }
+    .inv-note { padding: 0.6rem 0.8rem; margin-bottom: 1rem; }
+    .inv-totals { margin-top: 0.5rem; }
+    .invoice { page-break-inside: avoid; }
   }
 
   @media (max-width: 560px) {
@@ -604,6 +613,9 @@
     .inv-header { grid-template-columns: 1fr; }
     .inv-meta { text-align: left; }
     .line-items-header, .line-item { grid-template-columns: 1fr 60px 80px 20px; }
+    .btn-row { flex-wrap: wrap; }
+    .btn-row .generate-btn { flex: 1 1 45%; }
+    .btn-pdf { flex: 0 0 100%; width: 100%; }
   }
   /* PIN lock */
   #pin-overlay {
@@ -651,7 +663,7 @@
 <div class="app-head">
   <div>
     <div class="app-title">Invoice<span class="dot">.</span></div>
-    <div class="app-sub">Premium invoicing, zero friction</div>
+    <div class="app-sub"></div>
   </div>
   <button class="history-toggle" id="history-toggle" onclick="toggleHistory()">History</button>
 </div>
@@ -727,10 +739,10 @@
       <div id="pay-fields"></div>
     </div>
   </div>
-  <div style="display:flex;gap:0.6rem;margin-top:1.5rem;">
-    <button class="generate-btn" style="margin-top:0;width:auto;flex:1;white-space:nowrap;" type="button" onclick="generateInvoice()">Generate Invoice</button>
-    <button class="generate-btn share-btn" style="margin-top:0;width:auto;flex:0 0 auto;white-space:nowrap;background:transparent;color:var(--gold);border:1px solid var(--gold);" type="button" onclick="shareInvoice()">Share Invoice</button>
-    <button class="generate-btn" style="margin-top:0;width:auto;flex:0 0 auto;white-space:nowrap;background:#1f1f1f;color:#6b6b6b;border:1px solid #2a2a2a;" type="button" onclick="generateAndExport()">PDF</button>
+  <div class="btn-row">
+    <button class="generate-btn" style="margin-top:0;width:auto;flex:1;min-width:0;" type="button" onclick="generateInvoice()">Generate Invoice</button>
+    <button class="generate-btn share-btn" style="margin-top:0;width:auto;flex:1;min-width:0;background:transparent;color:var(--gold);border:1px solid var(--gold);" type="button" onclick="shareInvoice()">Share Invoice</button>
+    <button class="generate-btn btn-pdf" style="margin-top:0;background:#1f1f1f;color:#6b6b6b;border:1px solid #2a2a2a;" type="button" onclick="generateAndExport()">PDF</button>
   </div>
 </div>
 
@@ -772,43 +784,52 @@ function toB64url(bytes) {
 async function shareInvoice() {
   generateInvoice();
 
-  const inv = buildInvoiceFromDOM();
-  const shareObj = {
-    v: 1,
-    n:    inv.brand.name,
-    t:    inv.brand.tagline,
-    c:    inv.client.name,
-    num:  inv.number,
-    d:    inv.dates.issued,
-    due:  inv.dates.due,
-    items: inv.items.map(i => ({ desc: i.desc, qty: Number(i.qty) || 1, rate: Number(i.rate) || 0 })),
-    tax:  inv.tax.rate,
-    notes: inv.notes,
-    pay:  inv.payments.reduce((acc, p) => p.handle ? { ...acc, [p.key]: p.handle } : acc, {})
-  };
-
-  const dataBytes = new TextEncoder().encode(JSON.stringify(shareObj));
-  const key = await getSigningKey();
-  const sigBytes = await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, key, dataBytes);
-
-  const dataB64 = toB64url(dataBytes);
-  const sigB64  = toB64url(sigBytes);
-  const fullUrl = `${SHARE_BASE_URL}/#v1.${dataB64}.${sigB64}`;
-
-  let finalUrl = fullUrl;
-  try {
-    const resp = await fetch(`https://is.gd/create.php?format=simple&url=${encodeURIComponent(fullUrl)}`);
-    if (resp.ok) {
-      const short = (await resp.text()).trim();
-      if (short.startsWith('https://is.gd/')) finalUrl = short;
-    }
-  } catch {}
-
-  await navigator.clipboard.writeText(finalUrl);
-
   const btns = document.querySelectorAll('.share-btn');
-  btns.forEach(b => { b.textContent = finalUrl === fullUrl ? 'Link Copied' : 'Short Link Copied'; });
-  setTimeout(() => btns.forEach(b => { b.textContent = 'Share Invoice'; }), 2200);
+
+  try {
+    const inv = buildInvoiceFromDOM();
+    const shareObj = {
+      v: 1,
+      n:    inv.brand.name,
+      t:    inv.brand.tagline,
+      c:    inv.client.name,
+      num:  inv.number,
+      d:    inv.dates.issued,
+      due:  inv.dates.due,
+      items: inv.items.map(i => ({ desc: i.desc, qty: Number(i.qty) || 1, rate: Number(i.rate) || 0 })),
+      tax:  inv.tax.rate,
+      notes: inv.notes,
+      pay:  inv.payments.reduce((acc, p) => p.handle ? { ...acc, [p.key]: p.handle } : acc, {})
+    };
+
+    const dataBytes = new TextEncoder().encode(JSON.stringify(shareObj));
+    const key = await getSigningKey();
+    const sigBytes = await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, key, dataBytes);
+
+    const dataB64 = toB64url(dataBytes);
+    const sigB64  = toB64url(sigBytes);
+    const fullUrl = `${SHARE_BASE_URL}/#v1.${dataB64}.${sigB64}`;
+
+    let finalUrl = fullUrl;
+    try {
+      const resp = await fetch(`https://is.gd/create.php?format=simple&url=${encodeURIComponent(fullUrl)}`);
+      if (resp.ok) {
+        const short = (await resp.text()).trim();
+        if (short.startsWith('https://is.gd/')) finalUrl = short;
+      }
+    } catch {}
+
+    try {
+      await navigator.clipboard.writeText(finalUrl);
+      btns.forEach(b => { b.textContent = finalUrl === fullUrl ? 'Link Copied' : 'Short Link Copied'; });
+      setTimeout(() => btns.forEach(b => { b.textContent = 'Share Invoice'; }), 2200);
+    } catch {
+      prompt('Copy this link to share your invoice:', finalUrl);
+    }
+
+  } catch (err) {
+    alert('Could not generate share link. Make sure the page is loaded over HTTPS.');
+  }
 }
 
 /* ── End sharing ── */
