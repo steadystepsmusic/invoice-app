@@ -950,7 +950,7 @@ const payConfig = {
     color: 'venmo',
     buildLink: (handle, amount, memo) => {
       const h = encodeURIComponent(handle.replace(/^@/, ''));
-      return `https://account.venmo.com/pay?recipients=${h}&amount=${amount}&note=${encodeURIComponent(memo)}`;
+      return `https://venmo.com/?txn=pay&recipients=${h}&amount=${amount}&note=${encodeURIComponent(memo)}`;
     },
     displayHandle: h => '@' + h.replace(/^@/, '')
   },
