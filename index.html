@@ -613,10 +613,53 @@
     .inv-header { grid-template-columns: 1fr; }
     .inv-meta { text-align: left; }
     .line-items-header, .line-item { grid-template-columns: 1fr 60px 80px 20px; }
-    .btn-row { flex-wrap: wrap; }
-    .btn-row .generate-btn { flex: 1 1 45%; }
-    .btn-pdf { flex: 0 0 100%; width: 100%; }
+    .btn-row { display: grid; grid-template-columns: 1fr 70px; grid-template-rows: auto auto; gap: 0.5rem; }
+    .btn-row .generate-btn:first-child { grid-column: 1 / -1; }
+    .btn-pdf { width: auto; }
   }
+  /* Share modal */
+  #share-modal {
+    position: fixed; inset: 0; z-index: 9998;
+    background: rgba(0,0,0,0.7);
+    display: flex; align-items: center; justify-content: center;
+    padding: 1.5rem;
+  }
+  #share-modal.hidden { display: none; }
+  #share-modal-box {
+    background: var(--ui-panel);
+    border: 1px solid var(--ui-border);
+    border-radius: 8px;
+    padding: 1.5rem;
+    width: 100%; max-width: 420px;
+    display: flex; flex-direction: column; gap: 1rem;
+  }
+  #share-modal-label {
+    font-size: 0.72rem; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--ui-text-dim);
+  }
+  #share-modal-url {
+    background: var(--ui-input-bg);
+    border: 1px solid var(--ui-border);
+    border-radius: 4px;
+    padding: 0.7rem 0.9rem;
+    font-size: 0.8rem; color: var(--ui-text);
+    word-break: break-all; line-height: 1.5;
+  }
+  #share-modal-copy {
+    background: var(--gold); border: none; border-radius: 4px;
+    color: #0a0a0a; font-family: inherit; font-size: 0.76rem;
+    font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 0.75rem; cursor: pointer; transition: background 0.15s;
+  }
+  #share-modal-copy:hover { background: #d4b65a; }
+  #share-modal-copy.copied { background: #2a7a2a; color: #fff; }
+  #share-modal-close {
+    background: none; border: 1px solid var(--ui-border); border-radius: 4px;
+    color: var(--ui-text-dim); font-family: inherit; font-size: 0.72rem;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 0.6rem; cursor: pointer;
+  }
+
   /* PIN lock */
   #pin-overlay {
     position: fixed; inset: 0; z-index: 9999;
@@ -653,6 +696,15 @@
 </style>
 </head>
 <body>
+
+<div id="share-modal" class="hidden">
+  <div id="share-modal-box">
+    <div id="share-modal-label">Your invoice link</div>
+    <div id="share-modal-url"></div>
+    <button id="share-modal-copy" onclick="copyShareLink()">Copy Link</button>
+    <button id="share-modal-close" onclick="closeShareModal()">Done</button>
+  </div>
+</div>
 
 <div id="pin-overlay">
   <div id="pin-title">Invoice<span class="dot">.</span></div>
@@ -824,7 +876,7 @@ async function shareInvoice() {
       btns.forEach(b => { b.textContent = finalUrl === fullUrl ? 'Link Copied' : 'Short Link Copied'; });
       setTimeout(() => btns.forEach(b => { b.textContent = 'Share Invoice'; }), 2200);
     } catch {
-      prompt('Copy this link to share your invoice:', finalUrl);
+      showShareModal(finalUrl);
     }
 
   } catch (err) {
@@ -844,9 +896,9 @@ const USER_DEFAULTS = {
     venmo:   '',
     cashapp: '',
     paypal:  '',
-    zelle:   'nikmathewsmusic@gmail.com'
+    zelle:   ''
   },
-  activePayments: ['venmo', 'zelle'],
+  activePayments: ['venmo'],
   defaultTaxRate: 0,
   defaultDueDays: 7,
   template: 'executive'
@@ -1434,6 +1486,16 @@ document.getElementById('logo-input').addEventListener('change', e => {
    INIT — hydrate form from state, wire persistence listeners
    ============================================================ */
 function init() {
+  // One-time migration: remove zelle from active payments if it was only there by old default
+  if (!sessionStorage.getItem('migrated:zelle-default')) {
+    const zelleIdx = state.activePayments.indexOf('zelle');
+    if (zelleIdx >= 0 && !state.handles.zelle) {
+      state.activePayments.splice(zelleIdx, 1);
+      saveState();
+    }
+    sessionStorage.setItem('migrated:zelle-default', '1');
+  }
+
   applyTemplate(state.template);
 
   // Hydrate form fields
@@ -1459,6 +1521,32 @@ function init() {
   document.getElementById('from-name').addEventListener('input', e => { state.brand.name = e.target.value.trim(); saveState(); });
   document.getElementById('from-sub').addEventListener('input', e => { state.brand.tagline = e.target.value.trim(); saveState(); });
   document.getElementById('tax-rate').addEventListener('input', e => { state.defaultTaxRate = parseFloat(e.target.value) || 0; saveState(); });
+}
+
+// --- Share modal ---
+let _shareUrl = '';
+function showShareModal(url) {
+  _shareUrl = url;
+  document.getElementById('share-modal-url').textContent = url;
+  document.getElementById('share-modal-copy').textContent = 'Copy Link';
+  document.getElementById('share-modal-copy').classList.remove('copied');
+  document.getElementById('share-modal').classList.remove('hidden');
+}
+function closeShareModal() {
+  document.getElementById('share-modal').classList.add('hidden');
+}
+async function copyShareLink() {
+  try {
+    await navigator.clipboard.writeText(_shareUrl);
+  } catch {
+    const el = document.createElement('textarea');
+    el.value = _shareUrl; el.style.position = 'fixed'; el.style.opacity = '0';
+    document.body.appendChild(el); el.select(); document.execCommand('copy');
+    document.body.removeChild(el);
+  }
+  const btn = document.getElementById('share-modal-copy');
+  btn.textContent = 'Copied!'; btn.classList.add('copied');
+  setTimeout(closeShareModal, 1200);
 }
 
 // --- PIN lock ---
