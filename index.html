@@ -605,9 +605,48 @@
     .inv-meta { text-align: left; }
     .line-items-header, .line-item { grid-template-columns: 1fr 60px 80px 20px; }
   }
+  /* PIN lock */
+  #pin-overlay {
+    position: fixed; inset: 0; z-index: 9999;
+    background: var(--ui-bg);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 1.5rem;
+  }
+  #pin-overlay.hidden { display: none; }
+  #pin-title {
+    font-family: 'Fraunces', serif;
+    font-size: 1.4rem; font-weight: 400;
+    color: var(--ui-text); letter-spacing: -0.01em;
+  }
+  #pin-title .dot { color: var(--gold); }
+  #pin-input {
+    background: var(--ui-input-bg);
+    border: 1px solid var(--ui-border);
+    border-radius: 4px;
+    color: var(--ui-text);
+    font-family: inherit; font-size: 1.5rem;
+    letter-spacing: 0.4em; text-align: center;
+    padding: 0.75rem 1rem; width: 180px;
+    outline: none; transition: border-color 0.15s;
+  }
+  #pin-input:focus { border-color: var(--gold); }
+  #pin-input.error { border-color: #c0392b; animation: pin-shake 0.3s ease; }
+  @keyframes pin-shake {
+    0%,100% { transform: translateX(0); }
+    25% { transform: translateX(-6px); }
+    75% { transform: translateX(6px); }
+  }
+  #pin-hint { font-size: 0.72rem; color: var(--ui-text-muted); letter-spacing: 0.08em; }
 </style>
 </head>
 <body>
+
+<div id="pin-overlay">
+  <div id="pin-title">Invoice<span class="dot">.</span></div>
+  <input id="pin-input" type="password" inputmode="numeric" maxlength="6" placeholder="PIN" autocomplete="off">
+  <div id="pin-hint">Enter your PIN to continue</div>
+</div>
 
 <div class="app-head">
   <div>
@@ -1400,6 +1439,34 @@ function init() {
   document.getElementById('from-sub').addEventListener('input', e => { state.brand.tagline = e.target.value.trim(); saveState(); });
   document.getElementById('tax-rate').addEventListener('input', e => { state.defaultTaxRate = parseFloat(e.target.value) || 0; saveState(); });
 }
+
+// --- PIN lock ---
+const PIN = '1234'; // change this to your PIN
+
+(function() {
+  const overlay = document.getElementById('pin-overlay');
+  const input = document.getElementById('pin-input');
+
+  if (sessionStorage.getItem('pin_ok') === '1') {
+    overlay.classList.add('hidden');
+    return;
+  }
+
+  input.addEventListener('input', () => {
+    input.classList.remove('error');
+    if (input.value.length >= PIN.length) {
+      if (input.value === PIN) {
+        sessionStorage.setItem('pin_ok', '1');
+        overlay.classList.add('hidden');
+      } else {
+        input.classList.add('error');
+        setTimeout(() => { input.value = ''; input.classList.remove('error'); }, 600);
+      }
+    }
+  });
+
+  setTimeout(() => input.focus(), 50);
+})();
 
 init();
 </script>
