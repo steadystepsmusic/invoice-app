@@ -862,21 +862,12 @@ async function shareInvoice() {
     const sigB64  = toB64url(sigBytes);
     const fullUrl = `${SHARE_BASE_URL}/#v1.${dataB64}.${sigB64}`;
 
-    let finalUrl = fullUrl;
     try {
-      const resp = await fetch(`https://tinyurl.com/api-create.php?url=${encodeURIComponent(fullUrl)}`);
-      if (resp.ok) {
-        const short = (await resp.text()).trim();
-        if (short.startsWith('https://tinyurl.com/')) finalUrl = short;
-      }
-    } catch {}
-
-    try {
-      await navigator.clipboard.writeText(finalUrl);
-      btns.forEach(b => { b.textContent = finalUrl === fullUrl ? 'Link Copied' : 'Short Link Copied'; });
+      await navigator.clipboard.writeText(fullUrl);
+      btns.forEach(b => { b.textContent = 'Link Copied'; });
       setTimeout(() => btns.forEach(b => { b.textContent = 'Share Invoice'; }), 2200);
     } catch {
-      showShareModal(finalUrl);
+      showShareModal(fullUrl);
     }
 
   } catch (err) {
