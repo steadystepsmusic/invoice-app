@@ -1320,11 +1320,9 @@ function generateInvoice() {
     });
   }, 30);
 
-  // Save to history + bump next invoice number in state AND in the input
+  // Save to history + bump the state counter (field stays as-is so user can re-generate or correct)
   recordToHistory(invoice);
   bumpInvoiceNumber(invoice.number);
-  const next = (state.lastInvoiceNum || 0) + 1;
-  document.getElementById('inv-num').value = String(next).padStart(3, '0');
 }
 
 function generateAndExport() {
