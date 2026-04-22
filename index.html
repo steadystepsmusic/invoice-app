@@ -759,12 +759,12 @@
       <input id="inv-num" type="text" autocomplete="off">
     </div>
     <div>
-      <label>Tax Rate (%)</label>
-      <input id="tax-rate" type="number" min="0" max="100" step="0.1" value="0">
-    </div>
-    <div>
       <label>Issue Date</label>
       <input id="inv-date" type="date">
+    </div>
+    <div>
+      <label>Service Date</label>
+      <input id="svc-date" type="date">
     </div>
     <div>
       <label>Due Date</label>
@@ -847,9 +847,9 @@ async function shareInvoice() {
       c:    inv.client.name,
       num:  inv.number,
       d:    inv.dates.issued,
+      svc:  inv.dates.service,
       due:  inv.dates.due,
       items: inv.items.map(i => ({ desc: i.desc, qty: Number(i.qty) || 1, rate: Number(i.rate) || 0 })),
-      tax:  inv.tax.rate,
       notes: inv.notes,
       pay:  inv.payments.reduce((acc, p) => p.handle ? { ...acc, [p.key]: p.handle } : acc, {})
     };
@@ -879,18 +879,19 @@ async function shareInvoice() {
 
 const USER_DEFAULTS = {
   brand: {
-    name: 'Nik Mathews',
+    name: 'Nik Mathews Music',
     tagline: '(619) 208-6080 \u00b7 nikmathewsmusic@gmail.com',
     logo: ''
   },
   handles: {
-    venmo:   '',
+    venmo:   'nik-mathews',
     cashapp: '',
     paypal:  '',
     zelle:   ''
   },
   activePayments: ['venmo'],
-  defaultTaxRate: 0,
+  defaultClient: 'Brown Beard Brewing',
+  defaultNote: 'Thank you for the gig. Payment appreciated within 7 days.',
   defaultDueDays: 7,
   template: 'executive'
 };
@@ -908,7 +909,8 @@ function defaultState() {
     handles: { ...USER_DEFAULTS.handles },
     activePayments: [...USER_DEFAULTS.activePayments],
     lastInvoiceNum: 0,
-    defaultTaxRate: USER_DEFAULTS.defaultTaxRate,
+    defaultClient: USER_DEFAULTS.defaultClient,
+    defaultNote: USER_DEFAULTS.defaultNote,
     defaultDueDays: USER_DEFAULTS.defaultDueDays,
     template: USER_DEFAULTS.template
   };
@@ -1207,6 +1209,7 @@ function renderInvoice(invoice) {
           <div class="inv-wordmark">Invoice</div>
           <div class="inv-num">No. <strong>${escapeHtml(invoice.number)}</strong></div>
           <div class="inv-date-line">Issued <strong>${fmtDate(invoice.dates.issued)}</strong></div>
+          ${invoice.dates.service ? `<div class="inv-date-line">Service <strong>${fmtDate(invoice.dates.service)}</strong></div>` : ''}
           ${invoice.dates.due ? `<div class="inv-date-line">Due <strong>${fmtDate(invoice.dates.due)}</strong></div>` : ''}
         </div>
       </div>
@@ -1263,8 +1266,8 @@ function buildInvoiceFromDOM() {
   const issued = document.getElementById('inv-date').value || todayIso();
   const due = document.getElementById('inv-due').value || '';
   const notes = document.getElementById('inv-note').value.trim();
-  const taxRate = parseFloat(document.getElementById('tax-rate').value) || 0;
-  const totals = calcTotals(lineItems, taxRate);
+  const service = document.getElementById('svc-date').value || '';
+  const totals = calcTotals(lineItems, 0);
 
   const payments = state.activePayments.map(key => ({
     key,
@@ -1281,9 +1284,9 @@ function buildInvoiceFromDOM() {
     template: state.template,
     brand: { name, tagline, logo: state.brand.logo || '' },
     client: { name: client },
-    dates: { issued, due },
+    dates: { issued, service, due },
     items: lineItems.map(l => ({ desc: l.desc, qty: l.qty, rate: l.rate })),
-    tax: { rate: taxRate, amount: totals.tax },
+    tax: { rate: 0, amount: 0 },
     totals,
     payments,
     notes,
@@ -1296,7 +1299,6 @@ function generateInvoice() {
   // Sync brand info into state before building
   state.brand.name = document.getElementById('from-name').value.trim();
   state.brand.tagline = document.getElementById('from-sub').value.trim();
-  state.defaultTaxRate = parseFloat(document.getElementById('tax-rate').value) || 0;
   saveState();
 
   const invoice = buildInvoiceFromDOM();
@@ -1404,8 +1406,8 @@ function loadInvoiceFromHistory(id) {
   document.getElementById('client').value = inv.client?.name || '';
   document.getElementById('inv-num').value = inv.number || '';
   document.getElementById('inv-date').value = inv.dates?.issued || todayIso();
+  document.getElementById('svc-date').value = inv.dates?.service || '';
   document.getElementById('inv-due').value = inv.dates?.due || '';
-  document.getElementById('tax-rate').value = inv.tax?.rate ?? 0;
   document.getElementById('inv-note').value = inv.notes || '';
 
   lineItems = (inv.items || []).map(i => ({ id: Date.now() + Math.random(), ...i }));
@@ -1488,12 +1490,24 @@ function init() {
 
   applyTemplate(state.template);
 
+  // One-time migration: reset invoice counter and seed new defaults
+  if (!localStorage.getItem('migrated:defaults-v2')) {
+    state.lastInvoiceNum = 0;
+    if (!state.handles.venmo) state.handles.venmo = USER_DEFAULTS.handles.venmo;
+    if (!state.defaultClient) state.defaultClient = USER_DEFAULTS.defaultClient;
+    if (!state.defaultNote) state.defaultNote = USER_DEFAULTS.defaultNote;
+    saveState();
+    localStorage.setItem('migrated:defaults-v2', '1');
+  }
+
   // Hydrate form fields
   document.getElementById('from-name').value = state.brand.name || '';
   document.getElementById('from-sub').value = state.brand.tagline || '';
-  document.getElementById('tax-rate').value = state.defaultTaxRate || 0;
+  document.getElementById('client').value = state.defaultClient || '';
   document.getElementById('inv-date').value = todayIso();
+  document.getElementById('svc-date').value = todayIso();
   document.getElementById('inv-due').value = addDaysIso(todayIso(), state.defaultDueDays || 7);
+  document.getElementById('inv-note').value = state.defaultNote || '';
 
   // Auto-increment invoice number
   const next = (state.lastInvoiceNum || 0) + 1;
@@ -1510,7 +1524,6 @@ function init() {
   // Persist brand fields on change (debounced-ish via input)
   document.getElementById('from-name').addEventListener('input', e => { state.brand.name = e.target.value.trim(); saveState(); });
   document.getElementById('from-sub').addEventListener('input', e => { state.brand.tagline = e.target.value.trim(); saveState(); });
-  document.getElementById('tax-rate').addEventListener('input', e => { state.defaultTaxRate = parseFloat(e.target.value) || 0; saveState(); });
 }
 
 // --- Share modal ---
