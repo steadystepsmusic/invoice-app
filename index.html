@@ -1517,12 +1517,30 @@ function init() {
 
 // --- Share modal ---
 let _shareUrl = '';
-function showShareModal(url) {
-  _shareUrl = url;
-  document.getElementById('share-modal-url').textContent = url;
-  document.getElementById('share-modal-copy').textContent = 'Copy Link';
-  document.getElementById('share-modal-copy').classList.remove('copied');
+async function showShareModal(fullUrl) {
+  _shareUrl = fullUrl;
+  const urlEl = document.getElementById('share-modal-url');
+  const copyBtn = document.getElementById('share-modal-copy');
+  urlEl.textContent = 'Creating link...';
+  copyBtn.disabled = true;
+  copyBtn.textContent = 'Copy Link';
+  copyBtn.classList.remove('copied');
   document.getElementById('share-modal').classList.remove('hidden');
+
+  try {
+    const r = await fetch('https://pay.nikmathewsmusic.com/api/shorten', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: fullUrl })
+    });
+    if (r.ok) {
+      const data = await r.json();
+      _shareUrl = data.short;
+    }
+  } catch (e) { /* falls back to full URL */ }
+
+  urlEl.textContent = _shareUrl;
+  copyBtn.disabled = false;
 }
 function closeShareModal() {
   document.getElementById('share-modal').classList.add('hidden');
