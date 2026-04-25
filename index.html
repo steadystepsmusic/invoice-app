@@ -250,6 +250,10 @@
     align-items: center;
   }
 
+  input[type=number]::-webkit-inner-spin-button,
+  input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  input[type=number] { -moz-appearance: textfield; }
+
   .remove-btn {
     background: none;
     border: none;
@@ -755,7 +759,7 @@
     <div class="full"><div class="section-label">Client &amp; Invoice</div></div>
     <div class="full">
       <label>Bill To</label>
-      <input id="client" type="text" placeholder="The Blue Room" autocomplete="off">
+      <input id="client" type="text" placeholder="Client or venue name" autocomplete="off">
     </div>
     <div>
       <label>Invoice #</label>
@@ -865,13 +869,7 @@ async function shareInvoice() {
     const sigB64  = toB64url(sigBytes);
     const fullUrl = `${SHARE_BASE_URL}/#v1.${dataB64}.${sigB64}`;
 
-    try {
-      await navigator.clipboard.writeText(fullUrl);
-      btns.forEach(b => { b.textContent = 'Link Copied'; });
-      setTimeout(() => btns.forEach(b => { b.textContent = 'Share Invoice'; }), 2200);
-    } catch {
-      showShareModal(fullUrl);
-    }
+    showShareModal(fullUrl);
 
   } catch (err) {
     alert('Could not generate share link. Make sure the page is loaded over HTTPS.');
@@ -884,7 +882,7 @@ const USER_DEFAULTS = {
   brand: {
     name: 'Nik Mathews Music',
     tagline: '(619) 208-6080 \u00b7 nikmathewsmusic@gmail.com',
-    logo: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9Ii0xNSAtNSAzNTAgMzg1Ij4KICA8ZGVmcz4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZ29sZEdyYWQiIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdHlsZT0ic3RvcC1jb2xvcjojZjBkNDc4O3N0b3Atb3BhY2l0eToxIiAvPgogICAgICA8c3RvcCBvZmZzZXQ9IjQ1JSIgc3R5bGU9InN0b3AtY29sb3I6I2M5YTg0YztzdG9wLW9wYWNpdHk6MSIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdHlsZT0ic3RvcC1jb2xvcjojOWE3MjI4O3N0b3Atb3BhY2l0eToxIiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICA8L2RlZnM+CiAgPHRleHQgeD0iMTA1IiB5PSIxNDciIHRleHQtYW5jaG9yPSJtaWRkbGUiCiAgICBmb250LWZhbWlseT0iJ0dhcmFtb25kJywgJ1RpbWVzIE5ldyBSb21hbicsIEdlb3JnaWEsIHNlcmlmIgogICAgZm9udC1zaXplPSIxMDYiIGZvbnQtc3R5bGU9Iml0YWxpYyIgZm9udC13ZWlnaHQ9IjMwMCIKICAgIGZpbGw9IiMxYTFhMWEiPk48L3RleHQ+CiAgPHRleHQgeD0iMjIxIiB5PSIyNDQiIHRleHQtYW5jaG9yPSJtaWRkbGUiCiAgICBmb250LWZhbWlseT0iJ0dhcmFtb25kJywgJ1RpbWVzIE5ldyBSb21hbicsIEdlb3JnaWEsIHNlcmlmIgogICAgZm9udC1zaXplPSIxMDYiIGZvbnQtc3R5bGU9Iml0YWxpYyIgZm9udC13ZWlnaHQ9IjMwMCIKICAgIGZpbGw9IiMxYTFhMWEiPk08L3RleHQ+CiAgPHRleHQgeD0iMTYwIiB5PSIyMDAiIHRleHQtYW5jaG9yPSJtaWRkbGUiCiAgICBmb250LWZhbWlseT0iJ0dhcmFtb25kJywgJ1RpbWVzIE5ldyBSb21hbicsIEdlb3JnaWEsIHNlcmlmIgogICAgZm9udC1zaXplPSIxMzIiIGZvbnQtc3R5bGU9Iml0YWxpYyIgZm9udC13ZWlnaHQ9IjcwMCIKICAgIGZpbGw9InVybCgjZ29sZEdyYWQpIj5NPC90ZXh0PgogIDxsaW5lIHgxPSI0MCIgeTE9IjI2OCIgeDI9IjI4MCIgeTI9IjI2OCIgc3Ryb2tlPSIjYzlhODRjIiBzdHJva2Utd2lkdGg9IjEiIG9wYWNpdHk9IjAuNyIvPgogIDx0ZXh0IHg9IjE2MCIgeT0iMzAyIiBmb250LWZhbWlseT0iJ0hlbHZldGljYSBOZXVlJywgQXJpYWwsIHNhbnMtc2VyaWYiCiAgICBmb250LXNpemU9IjI0IiBmb250LXdlaWdodD0iNDAwIiBmaWxsPSIjYzlhODRjIgogICAgdGV4dC1hbmNob3I9Im1pZGRsZSIgbGV0dGVyLXNwYWNpbmc9IjMiPk5JSyBNQVRIRVdTPC90ZXh0Pgo8L3N2Zz4='
+    logo: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9Ii0xNSAtNSAzNTAgMzg1Ij4KICA8dGV4dCB4PSIxMDUiIHk9IjE0NyIgdGV4dC1hbmNob3I9Im1pZGRsZSIKICAgIGZvbnQtZmFtaWx5PSInR2FyYW1vbmQnLCAnVGltZXMgTmV3IFJvbWFuJywgR2VvcmdpYSwgc2VyaWYiCiAgICBmb250LXNpemU9IjEwNiIgZm9udC1zdHlsZT0iaXRhbGljIiBmb250LXdlaWdodD0iMzAwIgogICAgZmlsbD0iI2IwYjBiMCI+TjwvdGV4dD4KICA8dGV4dCB4PSIyMjEiIHk9IjI0NCIgdGV4dC1hbmNob3I9Im1pZGRsZSIKICAgIGZvbnQtZmFtaWx5PSInR2FyYW1vbmQnLCAnVGltZXMgTmV3IFJvbWFuJywgR2VvcmdpYSwgc2VyaWYiCiAgICBmb250LXNpemU9IjEwNiIgZm9udC1zdHlsZT0iaXRhbGljIiBmb250LXdlaWdodD0iMzAwIgogICAgZmlsbD0iI2IwYjBiMCI+TTwvdGV4dD4KICA8dGV4dCB4PSIxNjAiIHk9IjIwMCIgdGV4dC1hbmNob3I9Im1pZGRsZSIKICAgIGZvbnQtZmFtaWx5PSInR2FyYW1vbmQnLCAnVGltZXMgTmV3IFJvbWFuJywgR2VvcmdpYSwgc2VyaWYiCiAgICBmb250LXNpemU9IjEzMiIgZm9udC1zdHlsZT0iaXRhbGljIiBmb250LXdlaWdodD0iNzAwIgogICAgZmlsbD0iI2M5YTg0YyI+TTwvdGV4dD4KICA8bGluZSB4MT0iNDAiIHkxPSIyNjgiIHgyPSIyODAiIHkyPSIyNjgiIHN0cm9rZT0iI2M5YTg0YyIgc3Ryb2tlLXdpZHRoPSIxIiBvcGFjaXR5PSIwLjciLz4KICA8dGV4dCB4PSIxNjAiIHk9IjMwMiIgZm9udC1mYW1pbHk9IidIZWx2ZXRpY2EgTmV1ZScsIEFyaWFsLCBzYW5zLXNlcmlmIgogICAgZm9udC1zaXplPSIyNCIgZm9udC13ZWlnaHQ9IjQwMCIgZmlsbD0iI2M5YTg0YyIKICAgIHRleHQtYW5jaG9yPSJtaWRkbGUiIGxldHRlci1zcGFjaW5nPSIzIj5OSUsgTUFUSEVXUzwvdGV4dD4KPC9zdmc+'
   },
   handles: {
     venmo:   'nik-mathews',
@@ -1059,7 +1057,7 @@ function renderLines() {
     const row = document.createElement('div');
     row.className = 'line-item';
     row.innerHTML = `
-      <input type="text" placeholder="Performance / Set" value="${escapeHtml(item.desc)}" data-id="${item.id}" data-field="desc">
+      <input type="text" placeholder="e.g. Live Music Performance" value="${escapeHtml(item.desc)}" data-id="${item.id}" data-field="desc">
       <input type="number" placeholder="0.00" value="${item.rate}" min="0" step="0.01" data-id="${item.id}" data-field="rate">
       <button class="remove-btn" type="button" aria-label="Remove">&times;</button>
     `;
@@ -1275,7 +1273,7 @@ function buildInvoiceFromDOM() {
   const number = document.getElementById('inv-num').value.trim() || '001';
   const issued = document.getElementById('inv-date').value || todayIso();
   const due = document.getElementById('inv-due').value || '';
-  const notes = document.getElementById('inv-note').value.trim();
+  const notes = document.getElementById('inv-note').value.trim() || state.defaultNote || '';
   const service = document.getElementById('svc-date').value || '';
   const totals = calcTotals(lineItems, 0);
 
@@ -1554,14 +1552,21 @@ function init() {
     localStorage.setItem('migrated:logo-v6', '1');
   }
 
+  // v7 migration: solid gold M (no gradient defs), light gray N/M — fixes Chrome PDF rendering
+  if (!localStorage.getItem('migrated:logo-v7')) {
+    state.brand.logo = USER_DEFAULTS.brand.logo;
+    saveState();
+    localStorage.setItem('migrated:logo-v7', '1');
+  }
+
   // Hydrate form fields
   document.getElementById('from-name').value = state.brand.name || '';
   document.getElementById('from-sub').value = state.brand.tagline || '';
-  document.getElementById('client').value = state.defaultClient || '';
+  document.getElementById('client').value = '';
   document.getElementById('inv-date').value = todayIso();
   document.getElementById('svc-date').value = todayIso();
   document.getElementById('inv-due').value = addDaysIso(todayIso(), state.defaultDueDays || 7);
-  document.getElementById('inv-note').value = state.defaultNote || '';
+  document.getElementById('inv-note').value = '';
 
   // Auto-increment invoice number
   const next = (state.lastInvoiceNum || 0) + 1;
@@ -1573,7 +1578,7 @@ function init() {
   renderHistory();
 
   // Seed one line item for new sessions
-  if (!lineItems.length) addLine('Live Music Performance', 1, '');
+  if (!lineItems.length) addLine('', 1, '');
 
   // Persist brand fields on change (debounced-ish via input)
   document.getElementById('from-name').addEventListener('input', e => { state.brand.name = e.target.value.trim(); saveState(); });
