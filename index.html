@@ -231,7 +231,7 @@
 
   .line-items-header {
     display: grid;
-    grid-template-columns: 1fr 70px 100px 24px;
+    grid-template-columns: 1fr 100px 24px;
     gap: 0.5rem;
     font-size: 0.66rem;
     letter-spacing: 0.1em;
@@ -589,18 +589,20 @@
   .action-btn.primary:hover { background: #d4b65a; opacity: 1; }
 
   @media print {
-    @page { size: letter; margin: 0.4in; }
+    @page { size: letter; margin: 0.35in 0.4in; }
     html, body { background: #fff; padding: 0; min-height: 0 !important; height: auto !important; overflow: visible !important; }
     .app-head, .editor, .history-panel, .history-toggle, .action-bar, .btn-row { display: none !important; }
     #invoice-output { max-width: 100%; }
-    .invoice { box-shadow: none; border-radius: 0; padding: 0; }
+    .invoice { box-shadow: none; border-radius: 0; padding: 1.5rem 1.25rem; page-break-inside: avoid; }
+    .inv-header { margin-bottom: 1.25rem; }
+    .inv-bill-to { margin-bottom: 1.25rem; }
     .pay-btn { display: none !important; }
-    .pay-methods { grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 0.75rem; }
-    .pay-method .qr-wrap canvas, .pay-method .qr-wrap img { width: 80px !important; height: 80px !important; }
-    .pay-section { padding-top: 1rem; margin-top: 0; }
-    .inv-note { padding: 0.6rem 0.8rem; margin-bottom: 1rem; }
-    .inv-totals { margin-top: 0.5rem; }
-    .invoice { page-break-inside: avoid; }
+    .pay-methods { grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 0.6rem; }
+    .pay-method .qr-wrap canvas, .pay-method .qr-wrap img { width: 72px !important; height: 72px !important; }
+    .pay-section { padding-top: 0.75rem; margin-top: 0; }
+    .inv-note { padding: 0.5rem 0.75rem; margin-bottom: 0.75rem; }
+    .inv-totals { margin-top: 0.25rem; margin-bottom: 1.25rem; }
+    .inv-items tbody td { padding: 0.6rem 0; }
   }
 
   @media (max-width: 560px) {
@@ -612,7 +614,7 @@
     .invoice { padding: 1.75rem 1.5rem; }
     .inv-header { grid-template-columns: 1fr; }
     .inv-meta { text-align: left; }
-    .line-items-header, .line-item { grid-template-columns: 1fr 60px 80px 20px; }
+    .line-items-header, .line-item { grid-template-columns: 1fr 80px 20px; }
     .btn-row { display: grid; grid-template-columns: 1fr 70px; grid-template-rows: auto auto; gap: 0.5rem; }
     .btn-row .generate-btn:first-child { grid-column: 1 / -1; }
     .btn-pdf { width: auto; }
@@ -774,7 +776,7 @@
     <div class="full">
       <div class="section-label">Line Items</div>
       <div class="line-items-header">
-        <span>Description</span><span>Qty</span><span>Rate</span><span></span>
+        <span>Description</span><span>Rate</span><span></span>
       </div>
       <div id="line-items"></div>
       <button class="add-line-btn" type="button" onclick="addLine()">+ Add Line Item</button>
@@ -1057,13 +1059,11 @@ function renderLines() {
     row.className = 'line-item';
     row.innerHTML = `
       <input type="text" placeholder="Performance / Set" value="${escapeHtml(item.desc)}" data-id="${item.id}" data-field="desc">
-      <input type="number" placeholder="1" value="${item.qty}" min="0" step="1" data-id="${item.id}" data-field="qty">
       <input type="number" placeholder="0.00" value="${item.rate}" min="0" step="0.01" data-id="${item.id}" data-field="rate">
       <button class="remove-btn" type="button" aria-label="Remove">&times;</button>
     `;
-    const [descI, qtyI, rateI] = row.querySelectorAll('input');
+    const [descI, rateI] = row.querySelectorAll('input');
     descI.addEventListener('input', e => updateLine(item.id, 'desc', e.target.value));
-    qtyI.addEventListener('input', e => updateLine(item.id, 'qty', e.target.value));
     rateI.addEventListener('input', e => updateLine(item.id, 'rate', e.target.value));
     row.querySelector('.remove-btn').addEventListener('click', () => removeLine(item.id));
     container.appendChild(row);
@@ -1181,13 +1181,10 @@ function renderInvoice(invoice) {
     : '';
 
   const rows = invoice.items.map(l => {
-    const lineSub = (parseFloat(l.qty) || 0) * (parseFloat(l.rate) || 0);
     return `
       <tr>
         <td>${escapeHtml(l.desc || '-')}</td>
-        <td class="dim">${l.qty || 1}</td>
-        <td class="dim">${fmt(l.rate || 0)}</td>
-        <td class="num">${fmt(lineSub)}</td>
+        <td class="num">${fmt(l.rate || 0)}</td>
       </tr>`;
   }).join('');
 
@@ -1223,9 +1220,7 @@ function renderInvoice(invoice) {
         <thead>
           <tr>
             <th>Description</th>
-            <th class="num">Qty</th>
             <th class="num">Rate</th>
-            <th class="num">Amount</th>
           </tr>
         </thead>
         <tbody>${rows}</tbody>
