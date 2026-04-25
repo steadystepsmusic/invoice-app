@@ -1269,7 +1269,7 @@ let lastInvoice = null;
 function buildInvoiceFromDOM() {
   const name = document.getElementById('from-name').value.trim();
   const tagline = document.getElementById('from-sub').value.trim();
-  const client = document.getElementById('client').value.trim();
+  const client = document.getElementById('client').value.trim() || state.defaultClient || '';
   const number = document.getElementById('inv-num').value.trim() || '001';
   const issued = document.getElementById('inv-date').value || todayIso();
   const due = document.getElementById('inv-due').value || '';
@@ -1293,7 +1293,7 @@ function buildInvoiceFromDOM() {
     brand: { name, tagline, logo: state.brand.logo || '' },
     client: { name: client },
     dates: { issued, service, due },
-    items: lineItems.map(l => ({ desc: l.desc, qty: l.qty, rate: l.rate })),
+    items: lineItems.map(l => ({ desc: l.desc || 'Live Music Performance', qty: l.qty, rate: l.rate })),
     tax: { rate: 0, amount: 0 },
     totals,
     payments,
