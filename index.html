@@ -1064,6 +1064,8 @@ function renderLines() {
       <button class="remove-btn" type="button" aria-label="Remove">&times;</button>
     `;
     const [descI, rateI] = row.querySelectorAll('input');
+    descI.addEventListener('focus', e => e.target.select());
+    rateI.addEventListener('focus', e => e.target.select());
     descI.addEventListener('input', e => updateLine(item.id, 'desc', e.target.value));
     rateI.addEventListener('input', e => updateLine(item.id, 'rate', e.target.value));
     row.querySelector('.remove-btn').addEventListener('click', () => removeLine(item.id));
