@@ -594,7 +594,7 @@
     .app-head, .editor, .history-panel, .history-toggle, .action-bar, .btn-row { display: none !important; }
     #invoice-output { max-width: 100%; }
     .invoice { box-shadow: none; border-radius: 0; padding: 1.5rem 1.25rem; page-break-inside: avoid; }
-    .inv-logo { min-height: 90px; max-height: 160px; max-width: 200px; }
+    .inv-logo, .inv-brand > svg { min-height: 90px !important; max-height: 160px !important; max-width: 200px !important; }
     .inv-header { margin-bottom: 1.25rem; }
     .inv-bill-to { margin-bottom: 1.25rem; }
     .pay-btn { display: none !important; }
@@ -1132,6 +1132,17 @@ function escapeHtml(s) {
   ));
 }
 
+function inlineLogo(src, style) {
+  if (!src) return '';
+  if (src.startsWith('data:image/svg+xml;base64,')) {
+    try {
+      const svg = atob(src.split(',')[1]);
+      return svg.replace('<svg', `<svg style="${style || ''}" aria-label="Logo"`);
+    } catch(e) {}
+  }
+  return `<img src="${escapeHtml(src)}" alt="Logo" style="${style || ''}">`;
+}
+
 function makeQR(container, text) {
   if (!container || !text) return;
   container.innerHTML = '';
@@ -1192,7 +1203,7 @@ function renderInvoice(invoice) {
   }).join('');
 
   const logoHtml = invoice.brand.logo
-    ? `<img class="inv-logo" src="${escapeHtml(invoice.brand.logo)}" alt="Logo">`
+    ? inlineLogo(invoice.brand.logo, 'max-height:130px;max-width:400px;display:block;align-self:flex-start;')
     : '';
 
   return `
