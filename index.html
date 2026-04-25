@@ -594,7 +594,7 @@
     .app-head, .editor, .history-panel, .history-toggle, .action-bar, .btn-row { display: none !important; }
     #invoice-output { max-width: 100%; }
     .invoice { box-shadow: none; border-radius: 0; padding: 1.5rem 1.25rem; page-break-inside: avoid; }
-    .inv-logo, .inv-brand > svg { min-height: 90px !important; max-height: 160px !important; max-width: 200px !important; }
+    .inv-logo, .inv-brand > svg { height: 110px !important; width: auto !important; max-width: 220px !important; }
     .inv-header { margin-bottom: 1.25rem; }
     .inv-bill-to { margin-bottom: 1.25rem; }
     .pay-btn { display: none !important; }
@@ -884,7 +884,7 @@ const USER_DEFAULTS = {
   brand: {
     name: 'Nik Mathews Music',
     tagline: '(619) 208-6080 \u00b7 nikmathewsmusic@gmail.com',
-    logo: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMjAgMzcwIj4KICA8ZGVmcz4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZ29sZEdyYWQiIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdHlsZT0ic3RvcC1jb2xvcjojZjBkNDc4O3N0b3Atb3BhY2l0eToxIiAvPgogICAgICA8c3RvcCBvZmZzZXQ9IjQ1JSIgc3R5bGU9InN0b3AtY29sb3I6I2M5YTg0YztzdG9wLW9wYWNpdHk6MSIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdHlsZT0ic3RvcC1jb2xvcjojOWE3MjI4O3N0b3Atb3BhY2l0eToxIiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxmaWx0ZXIgaWQ9InNvZnRTaGFkb3ciIHg9Ii0yMCUiIHk9Ii0yMCUiIHdpZHRoPSIxNDAlIiBoZWlnaHQ9IjE0MCUiPgogICAgICA8ZmVEcm9wU2hhZG93IGR4PSIxIiBkeT0iMiIgc3RkRGV2aWF0aW9uPSIzIiBmbG9vZC1jb2xvcj0iIzAwMDAwMDIyIi8+CiAgICA8L2ZpbHRlcj4KICAgIDxmaWx0ZXIgaWQ9ImdvbGRTaGFkb3ciIHg9Ii0yMCUiIHk9Ii0yMCUiIHdpZHRoPSIxNDAlIiBoZWlnaHQ9IjE0MCUiPgogICAgICA8ZmVEcm9wU2hhZG93IGR4PSIxIiBkeT0iMyIgc3RkRGV2aWF0aW9uPSI0IiBmbG9vZC1jb2xvcj0iIzAwMDAwMDIyIi8+CiAgICA8L2ZpbHRlcj4KICA8L2RlZnM+CgogIDwhLS0gV2hpdGUgYmFja2dyb3VuZCAtLT4KICA8cmVjdCB3aWR0aD0iMzIwIiBoZWlnaHQ9IjM3MCIgZmlsbD0iI2ZmZmZmZiIgcng9IjgiLz4KCiAgPCEtLSBOIGRhcmsgdG9wLWxlZnQgLS0+CiAgPHRleHQKICAgIHg9IjEwNSIgeT0iMTQ3IgogICAgdGV4dC1hbmNob3I9Im1pZGRsZSIKICAgIGZvbnQtZmFtaWx5PSInR2FyYW1vbmQnLCAnVGltZXMgTmV3IFJvbWFuJywgR2VvcmdpYSwgc2VyaWYiCiAgICBmb250LXNpemU9IjEwNiIgZm9udC1zdHlsZT0iaXRhbGljIiBmb250LXdlaWdodD0iMzAwIgogICAgZmlsbD0iIzFhMWExYSIKICAgIGZpbHRlcj0idXJsKCNzb2Z0U2hhZG93KSIKICA+TjwvdGV4dD4KCiAgPCEtLSBTZWNvbmQgTSBkYXJrIGJvdHRvbS1yaWdodCAtLT4KICA8dGV4dAogICAgeD0iMjIxIiB5PSIyNDQiCiAgICB0ZXh0LWFuY2hvcj0ibWlkZGxlIgogICAgZm9udC1mYW1pbHk9IidHYXJhbW9uZCcsICdUaW1lcyBOZXcgUm9tYW4nLCBHZW9yZ2lhLCBzZXJpZiIKICAgIGZvbnQtc2l6ZT0iMTA2IiBmb250LXN0eWxlPSJpdGFsaWMiIGZvbnQtd2VpZ2h0PSIzMDAiCiAgICBmaWxsPSIjMWExYTFhIgogICAgZmlsdGVyPSJ1cmwoI3NvZnRTaGFkb3cpIgogID5NPC90ZXh0PgoKICA8IS0tIEdvbGQgTSBkZWFkIGNlbnRlciBmcm9udCAtLT4KICA8dGV4dAogICAgeD0iMTYwIiB5PSIyMDAiCiAgICB0ZXh0LWFuY2hvcj0ibWlkZGxlIgogICAgZm9udC1mYW1pbHk9IidHYXJhbW9uZCcsICdUaW1lcyBOZXcgUm9tYW4nLCBHZW9yZ2lhLCBzZXJpZiIKICAgIGZvbnQtc2l6ZT0iMTMyIiBmb250LXN0eWxlPSJpdGFsaWMiIGZvbnQtd2VpZ2h0PSI3MDAiCiAgICBmaWxsPSJ1cmwoI2dvbGRHcmFkKSIKICAgIGZpbHRlcj0idXJsKCNnb2xkU2hhZG93KSIKICA+TTwvdGV4dD4KCiAgPCEtLSBEaXZpZGluZyBsaW5lIC0tPgogIDxsaW5lIHgxPSI0MCIgeTE9IjI2OCIgeDI9IjI4MCIgeTI9IjI2OCIgc3Ryb2tlPSIjYzlhODRjIiBzdHJva2Utd2lkdGg9IjEiIG9wYWNpdHk9IjAuNyIvPgoKICA8IS0tIE5JSyBNQVRIRVdTIGdvbGQgLS0+CiAgPHRleHQKICAgIHg9IjE2MCIgeT0iMzAyIgogICAgZm9udC1mYW1pbHk9IidIZWx2ZXRpY2EgTmV1ZScsIEFyaWFsLCBzYW5zLXNlcmlmIgogICAgZm9udC1zaXplPSIyNCIgZm9udC13ZWlnaHQ9IjQwMCIKICAgIGZpbGw9IiNjOWE4NGMiIG9wYWNpdHk9IjEiCiAgICB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBsZXR0ZXItc3BhY2luZz0iMyIKICA+TklLIE1BVEhFV1M8L3RleHQ+Cgo8L3N2Zz4='
+    logo: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMjAgMzcwIj4KICA8ZGVmcz4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZ29sZEdyYWQiIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdHlsZT0ic3RvcC1jb2xvcjojZjBkNDc4O3N0b3Atb3BhY2l0eToxIiAvPgogICAgICA8c3RvcCBvZmZzZXQ9IjQ1JSIgc3R5bGU9InN0b3AtY29sb3I6I2M5YTg0YztzdG9wLW9wYWNpdHk6MSIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdHlsZT0ic3RvcC1jb2xvcjojOWE3MjI4O3N0b3Atb3BhY2l0eToxIiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICA8L2RlZnM+CiAgPHRleHQgeD0iMTA1IiB5PSIxNDciIHRleHQtYW5jaG9yPSJtaWRkbGUiCiAgICBmb250LWZhbWlseT0iJ0dhcmFtb25kJywgJ1RpbWVzIE5ldyBSb21hbicsIEdlb3JnaWEsIHNlcmlmIgogICAgZm9udC1zaXplPSIxMDYiIGZvbnQtc3R5bGU9Iml0YWxpYyIgZm9udC13ZWlnaHQ9IjMwMCIKICAgIGZpbGw9IiMxYTFhMWEiPk48L3RleHQ+CiAgPHRleHQgeD0iMjIxIiB5PSIyNDQiIHRleHQtYW5jaG9yPSJtaWRkbGUiCiAgICBmb250LWZhbWlseT0iJ0dhcmFtb25kJywgJ1RpbWVzIE5ldyBSb21hbicsIEdlb3JnaWEsIHNlcmlmIgogICAgZm9udC1zaXplPSIxMDYiIGZvbnQtc3R5bGU9Iml0YWxpYyIgZm9udC13ZWlnaHQ9IjMwMCIKICAgIGZpbGw9IiMxYTFhMWEiPk08L3RleHQ+CiAgPHRleHQgeD0iMTYwIiB5PSIyMDAiIHRleHQtYW5jaG9yPSJtaWRkbGUiCiAgICBmb250LWZhbWlseT0iJ0dhcmFtb25kJywgJ1RpbWVzIE5ldyBSb21hbicsIEdlb3JnaWEsIHNlcmlmIgogICAgZm9udC1zaXplPSIxMzIiIGZvbnQtc3R5bGU9Iml0YWxpYyIgZm9udC13ZWlnaHQ9IjcwMCIKICAgIGZpbGw9InVybCgjZ29sZEdyYWQpIj5NPC90ZXh0PgogIDxsaW5lIHgxPSI0MCIgeTE9IjI2OCIgeDI9IjI4MCIgeTI9IjI2OCIgc3Ryb2tlPSIjYzlhODRjIiBzdHJva2Utd2lkdGg9IjEiIG9wYWNpdHk9IjAuNyIvPgogIDx0ZXh0IHg9IjE2MCIgeT0iMzAyIiBmb250LWZhbWlseT0iJ0hlbHZldGljYSBOZXVlJywgQXJpYWwsIHNhbnMtc2VyaWYiCiAgICBmb250LXNpemU9IjI0IiBmb250LXdlaWdodD0iNDAwIiBmaWxsPSIjYzlhODRjIgogICAgdGV4dC1hbmNob3I9Im1pZGRsZSIgbGV0dGVyLXNwYWNpbmc9IjMiPk5JSyBNQVRIRVdTPC90ZXh0Pgo8L3N2Zz4='
   },
   handles: {
     venmo:   'nik-mathews',
@@ -1136,7 +1136,8 @@ function inlineLogo(src, style) {
   if (!src) return '';
   if (src.startsWith('data:image/svg+xml;base64,')) {
     try {
-      const svg = atob(src.split(',')[1]);
+      let svg = atob(src.split(',')[1]);
+      svg = svg.replace(/\s+width="[^"]*"/, '').replace(/\s+height="[^"]*"/, '');
       return svg.replace('<svg', `<svg style="${style || ''}" aria-label="Logo"`);
     } catch(e) {}
   }
@@ -1203,7 +1204,7 @@ function renderInvoice(invoice) {
   }).join('');
 
   const logoHtml = invoice.brand.logo
-    ? inlineLogo(invoice.brand.logo, 'max-height:130px;max-width:400px;display:block;align-self:flex-start;')
+    ? inlineLogo(invoice.brand.logo, 'height:130px;width:auto;max-width:320px;display:block;align-self:flex-start;')
     : '';
 
   return `
@@ -1537,6 +1538,13 @@ function init() {
     state.brand.logo = USER_DEFAULTS.brand.logo;
     saveState();
     localStorage.setItem('migrated:logo-v4', '1');
+  }
+
+  // v5 migration: transparent background logo (no white box on dark share view)
+  if (!localStorage.getItem('migrated:logo-v5')) {
+    state.brand.logo = USER_DEFAULTS.brand.logo;
+    saveState();
+    localStorage.setItem('migrated:logo-v5', '1');
   }
 
   // Hydrate form fields
