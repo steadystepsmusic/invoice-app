@@ -124,7 +124,7 @@
   }
   .history-item {
     display: grid;
-    grid-template-columns: auto 1fr auto auto;
+    grid-template-columns: auto 1fr auto auto auto;
     gap: 0.75rem;
     padding: 0.55rem 0.6rem;
     border-radius: 3px;
@@ -144,6 +144,31 @@
     cursor: pointer; font-size: 1rem; padding: 0; line-height: 1;
   }
   .history-item .h-del:hover { color: var(--gold); }
+  .history-item .h-paid-btn {
+    background: none; border: 1px solid #333; border-radius: 3px;
+    color: #555; cursor: pointer; font-size: 0.62rem; font-weight: 600;
+    letter-spacing: 0.06em; padding: 0.15rem 0.4rem; line-height: 1.4;
+    white-space: nowrap; text-transform: uppercase; transition: border-color 0.1s, color 0.1s;
+  }
+  .history-item .h-paid-btn:hover { border-color: var(--gold); color: var(--gold); }
+  .history-item.is-paid { opacity: 0.6; }
+  .history-item.is-paid .h-paid-btn { border-color: #c9a84c66; color: var(--gold); }
+  .paid-stamp {
+    display: none;
+    position: absolute;
+    top: 42%; left: 50%;
+    transform: translate(-50%, -50%) rotate(-28deg);
+    font-size: 5rem; font-weight: 900; font-family: 'Inter', sans-serif;
+    letter-spacing: 0.2em;
+    color: rgba(180, 20, 20, 0.18);
+    border: 6px solid rgba(180, 20, 20, 0.18);
+    border-radius: 6px;
+    padding: 0.3rem 1.2rem;
+    pointer-events: none;
+    user-select: none;
+    z-index: 10;
+  }
+  .invoice.is-paid .paid-stamp { display: block; }
 
   .editor-grid {
     display: grid;
@@ -953,7 +978,7 @@ const payConfig = {
     color: 'venmo',
     buildLink: (handle, amount, memo) => {
       const h = encodeURIComponent(handle.replace(/^@/, ''));
-      return `venmo://paycharge?txn=pay&recipients=${h}&amount=${amount}&note=${encodeURIComponent(memo)}`;
+      return `https://venmo.com/u/${h}?txn=pay&amount=${amount}&note=${encodeURIComponent(memo)}`;
     },
     displayHandle: h => '@' + h.replace(/^@/, '')
   },
@@ -1186,7 +1211,7 @@ function buildPayBlock(invoice) {
     </div>`;
 }
 
-function renderInvoice(invoice) {
+function renderInvoice(invoice, opts = {}) {
   applyTemplate(invoice.template);
 
   const taxRow = invoice.tax.rate > 0
@@ -1206,7 +1231,8 @@ function renderInvoice(invoice) {
     : '';
 
   return `
-    <div class="invoice" id="the-invoice">
+    <div class="invoice${opts.paid ? ' is-paid' : ''}" id="the-invoice">
+      <div class="paid-stamp">PAID</div>
       <div class="inv-header">
         <div class="inv-brand">
           ${logoHtml}
@@ -1385,11 +1411,12 @@ function renderHistory() {
     return;
   }
   list.innerHTML = history.map(inv => `
-    <div class="history-item" data-id="${inv.id}">
+    <div class="history-item${inv.paid ? ' is-paid' : ''}" data-id="${inv.id}">
       <span class="h-num">${escapeHtml(inv.number)}</span>
       <span class="h-client">${escapeHtml(inv.client?.name || 'Client')}</span>
       <span class="h-total">${fmt(inv.totals?.total || 0)}</span>
       <span class="h-date">${fmtDate(inv.dates?.issued)}</span>
+      <button class="h-paid-btn" type="button" aria-label="Toggle paid">${inv.paid ? 'Paid' : 'Mark Paid'}</button>
       <button class="h-del" type="button" aria-label="Delete">&times;</button>
     </div>
   `).join('');
@@ -1397,7 +1424,12 @@ function renderHistory() {
     const id = el.dataset.id;
     el.addEventListener('click', (e) => {
       if (e.target.classList.contains('h-del')) return;
+      if (e.target.classList.contains('h-paid-btn')) return;
       loadInvoiceFromHistory(id);
+    });
+    el.querySelector('.h-paid-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      togglePaid(id);
     });
     el.querySelector('.h-del').addEventListener('click', (e) => {
       e.stopPropagation();
@@ -1422,7 +1454,7 @@ function loadInvoiceFromHistory(id) {
   renderLines();
 
   lastInvoice = inv;
-  document.getElementById('invoice-output').innerHTML = renderInvoice(inv);
+  document.getElementById('invoice-output').innerHTML = renderInvoice(inv, { paid: !!inv.paid });
   setTimeout(() => {
     inv.payments.filter(p => p.handle).forEach(p => {
       const cfg = payConfig[p.key];
@@ -1440,6 +1472,29 @@ function deleteFromHistory(id) {
   if (!confirm('Delete this invoice from history?')) return;
   saveHistory(loadHistory().filter(h => h.id !== id));
   renderHistory();
+}
+
+function togglePaid(id) {
+  const history = loadHistory();
+  const idx = history.findIndex(h => h.id === id);
+  if (idx === -1) return;
+  history[idx].paid = !history[idx].paid;
+  saveHistory(history);
+  renderHistory();
+  if (lastInvoice && lastInvoice.id === id) {
+    const inv = history[idx];
+    document.getElementById('invoice-output').innerHTML = renderInvoice(inv, { paid: inv.paid });
+    setTimeout(() => {
+      inv.payments.filter(p => p.handle).forEach(p => {
+        const cfg = payConfig[p.key];
+        const el = document.getElementById(`qr-${p.key}-${inv.id}`);
+        const text = cfg.kind === 'deeplink'
+          ? cfg.buildLink(p.handle, inv.totals.total.toFixed(2), inv.memo)
+          : cfg.buildQRText(p.handle);
+        makeQR(el, text);
+      });
+    }, 30);
+  }
 }
 
 function toggleHistory() {
