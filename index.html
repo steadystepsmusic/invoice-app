@@ -1400,7 +1400,40 @@ function bumpInvoiceNumber(currentNum) {
   if (!isNaN(parsed)) {
     state.lastInvoiceNum = Math.max(state.lastInvoiceNum, parsed);
     saveState();
+    syncInvoiceCounterToServer(state.lastInvoiceNum);
   }
+}
+
+// --- Server-persisted invoice counter (survives Safari clearing local storage / new devices) ---
+async function syncInvoiceCounterFromServer() {
+  try {
+    const r = await fetch('https://pay.nikmathewsmusic.com/api/invoice-counter');
+    if (!r.ok) return;
+    const data = await r.json();
+    const serverVal = parseInt(data.value, 10) || 0;
+    if (serverVal > (state.lastInvoiceNum || 0)) {
+      state.lastInvoiceNum = serverVal;
+      saveState();
+      const field = document.getElementById('inv-num');
+      // Only overwrite if the user hasn't already started editing this invoice
+      if (field && !field.dataset.userEdited) {
+        field.value = String(serverVal + 1).padStart(3, '0');
+      }
+    } else if ((state.lastInvoiceNum || 0) > serverVal) {
+      // This device is ahead of the server (e.g. first sync after the server counter was created) -- push it up
+      syncInvoiceCounterToServer(state.lastInvoiceNum);
+    }
+  } catch (e) { /* offline or endpoint unavailable -- local counter still works */ }
+}
+
+async function syncInvoiceCounterToServer(value) {
+  try {
+    await fetch('https://pay.nikmathewsmusic.com/api/invoice-counter', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ value })
+    });
+  } catch (e) { /* best effort -- local counter still saved */ }
 }
 
 function renderHistory() {
@@ -1553,9 +1586,9 @@ function init() {
 
   applyTemplate(state.template);
 
-  // One-time migration: reset invoice counter and seed new defaults
+  // One-time migration: seed new defaults (no longer resets the invoice counter --
+  // that reset caused numbering to silently restart whenever Safari cleared local storage)
   if (!localStorage.getItem('migrated:defaults-v2')) {
-    state.lastInvoiceNum = 0;
     if (!state.handles.venmo) state.handles.venmo = USER_DEFAULTS.handles.venmo;
     if (!state.defaultClient) state.defaultClient = USER_DEFAULTS.defaultClient;
     if (!state.defaultNote) state.defaultNote = USER_DEFAULTS.defaultNote;
@@ -1623,9 +1656,13 @@ function init() {
   document.getElementById('inv-due').value = addDaysIso(todayIso(), state.defaultDueDays || 7);
   document.getElementById('inv-note').value = '';
 
-  // Auto-increment invoice number
+  // Auto-increment invoice number (local value first, then reconciled against the
+  // server-persisted counter once it responds, so numbering survives Safari clearing storage)
   const next = (state.lastInvoiceNum || 0) + 1;
-  document.getElementById('inv-num').value = String(next).padStart(3, '0');
+  const invNumField = document.getElementById('inv-num');
+  invNumField.value = String(next).padStart(3, '0');
+  invNumField.addEventListener('input', () => { invNumField.dataset.userEdited = '1'; }, { once: true });
+  syncInvoiceCounterFromServer();
 
   renderLogoPreview();
   renderPayChips();
