@@ -1642,8 +1642,10 @@ function init() {
 
 // --- Share modal ---
 let _shareUrl = '';
+let _shareFullUrl = '';
 async function showShareModal(fullUrl) {
-  _shareUrl = fullUrl;
+  _shareFullUrl = fullUrl;
+  _shareUrl = '';
   const urlEl = document.getElementById('share-modal-url');
   const copyBtn = document.getElementById('share-modal-copy');
   urlEl.textContent = 'Creating link...';
@@ -1651,21 +1653,32 @@ async function showShareModal(fullUrl) {
   copyBtn.textContent = 'Copy Link';
   copyBtn.classList.remove('copied');
   document.getElementById('share-modal').classList.remove('hidden');
+  await tryShorten();
+}
 
+async function tryShorten() {
+  const urlEl = document.getElementById('share-modal-url');
+  const copyBtn = document.getElementById('share-modal-copy');
   try {
     const r = await fetch('https://pay.nikmathewsmusic.com/api/shorten', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url: fullUrl })
+      body: JSON.stringify({ url: _shareFullUrl })
     });
     if (r.ok) {
       const data = await r.json();
       _shareUrl = data.short;
     }
-  } catch (e) { /* falls back to full URL */ }
+  } catch (e) { /* handled below */ }
 
-  urlEl.textContent = _shareUrl;
-  copyBtn.disabled = false;
+  if (_shareUrl) {
+    urlEl.textContent = _shareUrl;
+    copyBtn.disabled = false;
+  } else {
+    // Full link is too long to text reliably (breaks over SMS) — don't hand it out silently.
+    urlEl.innerHTML = 'Link shortening failed — this link is too long to text directly. <a href="#" onclick="tryShorten();return false;" style="color:inherit;text-decoration:underline;">Retry</a>';
+    copyBtn.disabled = true;
+  }
 }
 function closeShareModal() {
   document.getElementById('share-modal').classList.add('hidden');
